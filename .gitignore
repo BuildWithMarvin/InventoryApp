@@ -1,0 +1,12 @@
+﻿# Visual Studio / .NET Standard Ignore
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+packages/
+*.nupkg
+.DS_Store
+*.db
