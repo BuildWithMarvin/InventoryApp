@@ -9,9 +9,9 @@ namespace InventoryApp.Api.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly InventoryDbContext _context;
 
-        public ProductsController(AppDbContext context)
+        public ProductsController(InventoryDbContext context)
         {
             _context = context;
         }
@@ -25,7 +25,7 @@ namespace InventoryApp.Api.Controllers
 
         // POST: api/Products (Erstellt ein neues Produkt)
         [HttpPost]
-        public async Task<ActionResult<Product>> PostProduct(Product product)
+        public async Task<ActionResult<Product>> CreateProduct(Product product)
         {
             _context.Products.Add(product);
             await _context.SaveChangesAsync();

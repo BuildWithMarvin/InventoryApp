@@ -1,25 +1,40 @@
-﻿namespace InventoryApp.Maui
+﻿using InventoryApp.Maui.ViewModels;
+using ZXing.Net.Maui;
+
+namespace InventoryApp.Maui
 {
     public partial class MainPage : ContentPage
     {
-        int count = 0;
-
-        public MainPage()
+        public MainPage(MainViewModel viewModel)
         {
             InitializeComponent();
+
+            // Wir sagen der Seite, wer ihr "Gehirn" ist
+            BindingContext = viewModel;
+
+            barcodeReader.Options = new BarcodeReaderOptions
+            {
+                Formats = BarcodeFormats.All,
+                AutoRotate = true,
+                Multiple = false
+            };
         }
 
-        private void OnCounterClicked(object sender, EventArgs e)
+        private void CameraBarcodeReaderView_BarcodesDetected(object sender, BarcodeDetectionEventArgs e)
         {
-            count++;
+            var first = e.Results?.FirstOrDefault();
+            if (first == null) return;
 
-            if (count == 1)
-                CounterBtn.Text = $"Clicked {count} time";
-            else
-                CounterBtn.Text = $"Clicked {count} times";
+            var vm = (MainViewModel)BindingContext;
 
-            SemanticScreenReader.Announce(CounterBtn.Text);
+            // Wir prüfen, ob der Scanner gerade aktiv ist, und leiten den Code ans ViewModel
+            if (vm.IsDetecting)
+            {
+                Dispatcher.Dispatch(() =>
+                {
+                    vm.ProcessBarcodeCommand.Execute(first.Value);
+                });
+            }
         }
     }
-
 }

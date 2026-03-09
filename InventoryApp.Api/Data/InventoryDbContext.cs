@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InventoryApp.Api.Data
 {
-    public class AppDbContext : DbContext
+    public class InventoryDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        public InventoryDbContext(DbContextOptions<InventoryDbContext> dbSetup) : base(dbSetup) { }
 
         public DbSet<Product> Products { get; set; }
     }

@@ -5,7 +5,7 @@ VisualStudioVersion = 17.14.36518.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryApp.Api", "InventoryApp.Api\InventoryApp.Api.csproj", "{78EB9786-ED1F-401A-88B6-F3E1E500983E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryApp.Maui", "InventoryApp.Maui\InventoryApp.Maui.csproj", "{FD477B87-514B-4956-9E10-2A98F9A0D6AA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryApp.Maui", "InventoryApp.Maui\InventoryApp.Maui.csproj", "{BF102793-5987-8162-A006-CB6A800AB46B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,11 +17,12 @@ Global
 		{78EB9786-ED1F-401A-88B6-F3E1E500983E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78EB9786-ED1F-401A-88B6-F3E1E500983E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78EB9786-ED1F-401A-88B6-F3E1E500983E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FD477B87-514B-4956-9E10-2A98F9A0D6AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FD477B87-514B-4956-9E10-2A98F9A0D6AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FD477B87-514B-4956-9E10-2A98F9A0D6AA}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{FD477B87-514B-4956-9E10-2A98F9A0D6AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FD477B87-514B-4956-9E10-2A98F9A0D6AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF102793-5987-8162-A006-CB6A800AB46B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF102793-5987-8162-A006-CB6A800AB46B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF102793-5987-8162-A006-CB6A800AB46B}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{BF102793-5987-8162-A006-CB6A800AB46B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF102793-5987-8162-A006-CB6A800AB46B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF102793-5987-8162-A006-CB6A800AB46B}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
