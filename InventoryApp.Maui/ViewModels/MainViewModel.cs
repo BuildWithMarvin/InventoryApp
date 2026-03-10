@@ -8,7 +8,7 @@ namespace InventoryApp.Maui.ViewModels
     {
         private readonly ApiService _apiService;
 
-        // Diese Eigenschaften sind an die UI gebunden
+        // UI-State (is automatically converted into real properties by the MVVM Toolkit)
         [ObservableProperty]
         private string resultText = "Point the camera at a barcode....";
 
@@ -23,46 +23,93 @@ namespace InventoryApp.Maui.ViewModels
             _apiService = apiService;
         }
 
-        // Das ist der Befehl (Command), der beim Scannen ausgeführt wird
         [RelayCommand]
         public async Task ProcessBarcodeAsync(string scannedBarcode)
         {
+            // Pause the scanner immediately so that it does not fire the same barcode 50 times per second. 
             IsDetecting = false;
             ResultText = $"Check barcode {scannedBarcode}...";
             ResultColor = Colors.Orange;
 
             try
             {
-                var products = await _apiService.GetProductsAsync();
+                // TODO (V2): Convert to _apiService.GetProductByBarcode(scannedBarcode)!
+                // Currently, we download the entire warehouse with every scan. This is acceptable for 50 items, but for 50,000 items, it significantly impacts performance.
+                var products = await _apiService.GetProducts();
                 var existingProduct = products?.FirstOrDefault(p => p.Barcode == scannedBarcode);
 
                 if (existingProduct != null)
                 {
-                    ResultText = $" Found: {existingProduct.Name} (Quantity: {existingProduct.Quantity})";
-                    ResultColor = Colors.Green;
+                    // ==========================================
+                    // SCENARIO A: PRODUKT BEKANNT -> BESTAND UPDATE
+                    // ==========================================
+
+                    string action = await Shell.Current.DisplayActionSheet(
+                        $"{existingProduct.Name} ({existingProduct.Quantity}x in stock)",
+                        "Cancel", null, "Stock In (+)", "Stock Out (-)");
+
+                    if (action == "Cancel" || string.IsNullOrEmpty(action))
+                    {
+                        ResultText = "Action canceled.";
+                        ResultColor = Colors.Gray;
+                    }
+                    else
+                    {
+                        string amountStr = await Shell.Current.DisplayPromptAsync(
+                            action,
+                            "How many items?",
+                            "Save", "Cancel", "e.g. 1", keyboard: Keyboard.Numeric);
+
+                        if (!string.IsNullOrWhiteSpace(amountStr) && int.TryParse(amountStr, out int amount))
+                        {
+                            if (action == "Stock In (+)")
+                            {
+                                existingProduct.Quantity += amount;
+                            }
+                            else if (action == "Stock Out (-)")
+                            {
+                                existingProduct.Quantity -= amount;
+                                // Sanity check: No negative stock possible
+                                if (existingProduct.Quantity < 0) existingProduct.Quantity = 0;
+                            }
+
+                            var success = await _apiService.UpdateProduct(existingProduct);
+
+                            ResultText = success ? $"{existingProduct.Name} updated! New stock: {existingProduct.Quantity}" : "Error updating!";
+                            ResultColor = success ? Colors.Green : Colors.Red;
+                        }
+                        else
+                        {
+                            ResultText = amountStr == null ? "Action canceled." : "Invalid number. Canceled.";
+                            ResultColor = Colors.Gray;
+                        }
+                    }
                 }
                 else
                 {
-                    // --- 1. NAME ABFRAGEN (Zwangsschleife) ---
+
+                    // SCENARIO B: UNKNOWN PRODUCT -> CREATE NEW
+
+
+                    // We force the user to enter data using a while loop. 
+                    // Half records in the database will only cause problems later on.
+
                     string newName = "";
                     while (string.IsNullOrWhiteSpace(newName))
                     {
-                        newName = await Shell.Current.DisplayPromptAsync("Name (1/4)", "What is the name of this article? (required field!)", "Continue", "Cancel", "e.g. Coffe");
-
-                        if (newName == null) // User hat "Abbrechen" gedrückt
+                        newName = await Shell.Current.DisplayPromptAsync("Name (1/4)", "What is the name of this article? (required field!)", "Continue", "Cancel", "e.g. Coffee");
+                        if (newName == null)
                         {
                             ResultText = "scan canceled.";
                             ResultColor = Colors.Gray;
-                            return; // Beendet den gesamten Vorgang
+                            return; // emergency exit
                         }
                     }
 
-                    // --- 2. BESCHREIBUNG ABFRAGEN (Zwangsschleife) ---
                     string description = "";
                     while (string.IsNullOrWhiteSpace(description))
                     {
                         description = await Shell.Current.DisplayPromptAsync("Description (2/4)", "Please enter a brief description:", "Continue", "Cancel", "e.g. outdoor-gear");
-
                         if (description == null)
                         {
                             ResultText = "scan canceled.";
@@ -71,13 +118,11 @@ namespace InventoryApp.Maui.ViewModels
                         }
                     }
 
-                    // --- 3. MENGE ABFRAGEN (Zwangsschleife mit Zahlen-Check) ---
                     string quantityStr = "";
                     int quantity = 0;
-                    while (true) // Endlosschleife, bis eine GÜLTIGE Zahl eingegeben wird
+                    while (true)
                     {
                         quantityStr = await Shell.Current.DisplayPromptAsync("Quantity (3/4)", $"How often have we '{newName}'?", "Continue", "Cancel", "e.g. 5", keyboard: Keyboard.Numeric);
-
                         if (quantityStr == null)
                         {
                             ResultText = "scan canceled.";
@@ -85,21 +130,14 @@ namespace InventoryApp.Maui.ViewModels
                             return;
                         }
 
-                        // Prüfen, ob der Text wirklich eine Zahl ist
-                        if (int.TryParse(quantityStr, out quantity))
-                        {
-                            break; // Gültige Zahl! Schleife erfolgreich verlassen.
-                        }
-                        // Falls er Buchstaben eingegeben hat, dreht sich die Schleife nochmal!
+                        if (int.TryParse(quantityStr, out quantity)) break;
                     }
 
-                    // --- 4. PREIS ABFRAGEN (Zwangsschleife mit Komma-Check) ---
                     string priceStr = "";
                     decimal price = 0.00m;
                     while (true)
                     {
                         priceStr = await Shell.Current.DisplayPromptAsync("Price (4/4)", "How much does one piece cost?", "Save", "Cancel", "e.g. 2.99", keyboard: Keyboard.Numeric);
-
                         if (priceStr == null)
                         {
                             ResultText = "scan canceled.";
@@ -107,37 +145,34 @@ namespace InventoryApp.Maui.ViewModels
                             return;
                         }
 
-                        // Punkt in Komma umwandeln, falls das Handy englisch/deutsch gemischt ist
-                        if (decimal.TryParse(priceStr.Replace(".", ","), out price))
-                        {
-                            break; // Gültige Zahl! Schleife verlassen.
-                        }
+                        // Pragmatic fix for the comma/full stop problem on different mobile phone keyboards (DE vs. EN)
+                        if (decimal.TryParse(priceStr.Replace(".", ","), out price)) break;
                     }
 
-                    // --- ALLE DATEN GESAMMELT: AB IN DIE DATENBANK! ---
                     var newProduct = new Product
                     {
                         Name = newName,
-                        Description = description, // <-- Die vom User eingegebene Beschreibung!
+                        Description = description,
                         Quantity = quantity,
                         Price = price,
                         Barcode = scannedBarcode
                     };
 
-                    var success = await _apiService.AddProductAsync(newProduct);
+                    var success = await _apiService.AddProduct(newProduct);
 
-                    ResultText = success ? $"{newName} ({quantity}) gespeichert!" : "Fehler beim Speichern!";
+                    ResultText = success ? $"{newName} ({quantity}) stored!" : "error saving!";
                     ResultColor = success ? Colors.Green : Colors.Red;
                 }
             }
             catch (Exception ex)
             {
-                ResultText = $"❌ Fehler: {ex.Message}";
+                ResultText = $"Error: {ex.Message}";
                 ResultColor = Colors.Red;
             }
 
-            await Task.Delay(3000); // 3 Sekunden Pause
-            ResultText = "Halte die Kamera auf einen Barcode...";
+            // Scanner reset: Give the user a moment to read the result before the scanner is reactivated.
+            await Task.Delay(3000);
+            ResultText = "Point the camera at a barcode....";
             ResultColor = Colors.Black;
             IsDetecting = true;
         }

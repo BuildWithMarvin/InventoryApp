@@ -9,7 +9,7 @@ namespace InventoryApp.Maui
         {
             InitializeComponent();
 
-            // Wir sagen der Seite, wer ihr "Gehirn" ist
+            // We tell the page who its ‘brain’ is
             BindingContext = viewModel;
 
             barcodeReader.Options = new BarcodeReaderOptions
@@ -27,7 +27,7 @@ namespace InventoryApp.Maui
 
             var vm = (MainViewModel)BindingContext;
 
-            // Wir prüfen, ob der Scanner gerade aktiv ist, und leiten den Code ans ViewModel
+            // We check whether the scanner is currently active and forward the code to the ViewModel.
             if (vm.IsDetecting)
             {
                 Dispatcher.Dispatch(() =>

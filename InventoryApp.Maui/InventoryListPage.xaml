@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="InventoryApp.Maui.InventoryListPage"
+             x:Name="InventoryPage" 
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto, *">
+
+        <SearchBar Grid.Row="0" Text="{Binding SearchText}" Placeholder="Suchen (Name, Barcode...)" CancelButtonColor="Red" Margin="10,5" />
+
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadProductsAzureCommand}">
+            <CollectionView ItemsSource="{Binding Products}">
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="10,5" Padding="15" CornerRadius="10" BackgroundColor="#F8F8F8" BorderColor="LightGray">
+
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding BindingContext.ProductSelectedCommand, Source={x:Reference InventoryPage}}" 
+                                    CommandParameter="{Binding .}" />
+                            </Frame.GestureRecognizers>
+
+                            <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="*, Auto">
+                                <Label Grid.Row="0" Grid.Column="0" Text="{Binding Name}" FontAttributes="Bold" FontSize="18" TextColor="Black" />
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding Price, StringFormat='{0:C}'}" FontSize="16" TextColor="Green" FontAttributes="Bold" />
+                                <Label Grid.Row="1" Grid.Column="0" Text="{Binding Description}" FontSize="14" TextColor="Gray" />
+                                <Label Grid.Row="1" Grid.Column="1" Text="{Binding Quantity, StringFormat='Bestand: {0}x'}" FontSize="14" TextColor="DarkBlue" />
+                            </Grid>
+
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.EmptyView>
+                    <Label Text="Keine Produkte gefunden." HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" Margin="20"/>
+                </CollectionView.EmptyView>
+
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>
