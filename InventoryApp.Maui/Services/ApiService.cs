@@ -1,19 +1,13 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System.Text;
 using System.Text.Json;
+using InventoryApp.Maui.Models;
+
 
 namespace InventoryApp.Maui.Services
 {
     // Die Properties müssen exakt so heißen wie im JSON vom Azure-Backend.
-    public class Product
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public int Quantity { get; set; }
-        public decimal Price { get; set; }
-        public string Barcode { get; set; }
-    }
+   
 
     public class ApiService
     {
@@ -33,6 +27,21 @@ namespace InventoryApp.Maui.Services
             {
                 throw new Exception("Fatal Error: 'ProductsEndpointUrl' is null or empty. Please verify your configuration source (e.g., appsettings.json keys and build action).");
             }
+        }
+
+        public async Task<Product> GetProductByBarcodeAsync(string barcode)
+        {
+            // Wir fragen gezielt nur diesen einen Barcode an!
+            var response = await _httpClient.GetAsync($"{_apiUrl}/barcode/{barcode}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<Product>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+
+            // Wenn StatusCode 404 (NotFound) ist, geben wir null zurück (Produkt unbekannt)
+            return null;
         }
 
         public async Task<List<Product>> GetProducts()
@@ -72,7 +81,35 @@ namespace InventoryApp.Maui.Services
                 throw new Exception($"HTTP {response.StatusCode} | ID: {product.Id} | Backend Error: {errorDetails}");
             }
 
+
+
             return true;
+        }
+        // --- POST: Mitarbeiter-Login ---
+        public async Task<int?> LoginAsync(string pinCode)
+        {
+            // Wir verpacken den PIN als JSON-String ("1234")
+            var content = new StringContent($"\"{pinCode}\"", Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync($"{_apiUrl.Replace("/products", "")}/employees/login", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+
+                // Wir lesen das Employee-Objekt aus (wir brauchen ein kurzes Hilfs-DTO dafür)
+                var employee = JsonSerializer.Deserialize<EmployeeDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return employee?.Id; // Gibt die Datenbank-ID des Mitarbeiters zurück
+            }
+
+            return null; // Login fehlgeschlagen (Falscher PIN)
+        }
+
+        // Ein kleines Hilfs-Objekt nur für den Login-Response
+        private class EmployeeDto
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
         }
     }
 }

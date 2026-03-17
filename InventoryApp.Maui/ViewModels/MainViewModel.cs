@@ -1,29 +1,78 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+﻿using InventoryApp.Maui.Models;
 using InventoryApp.Maui.Services;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace InventoryApp.Maui.ViewModels
 {
-    public partial class MainViewModel : ObservableObject
+    public partial class MainViewModel : INotifyPropertyChanged
     {
+        
+        public event PropertyChangedEventHandler PropertyChanged;
         private readonly ApiService _apiService;
 
         // UI-State (is automatically converted into real properties by the MVVM Toolkit)
-        [ObservableProperty]
-        private string resultText = "Point the camera at a barcode....";
+        
 
-        [ObservableProperty]
-        private Color resultColor = Colors.Black;
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
-        [ObservableProperty]
-        private bool isDetecting = true;
+        private bool _isDetecting = true;
+        public bool IsDetecting
+        {
+            get => _isDetecting;
+            set
+            {
+                if (_isDetecting != value)
+                {
+                    _isDetecting = value;
+                    OnPropertyChanged(); // Meldet der UI die Änderung
+                }
+            }
+        }
+
+        private string _resultText = "Point the camera at a barcode...";
+        public string ResultText
+        {
+            get => _resultText;
+            set
+            {
+                if (_resultText != value)
+                {
+                    _resultText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private Color _resultColor = Colors.Black;
+        public Color ResultColor
+        {
+            get => _resultColor;
+            set
+            {
+                if (_resultColor != value)
+                {
+                    _resultColor = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public ICommand ProcessBarcodeCommand { get; }
+       
 
         public MainViewModel(ApiService apiService)
         {
             _apiService = apiService;
-        }
 
-        [RelayCommand]
+            // Commands mit den MAUI-Standard-Befehlen verknüpfen
+            ProcessBarcodeCommand = new Command<string>(async (barcode) => await ProcessBarcodeAsync(barcode));
+            
+        }
         public async Task ProcessBarcodeAsync(string scannedBarcode)
         {
             // Pause the scanner immediately so that it does not fire the same barcode 50 times per second. 
@@ -33,19 +82,16 @@ namespace InventoryApp.Maui.ViewModels
 
             try
             {
-                // TODO (V2): Convert to _apiService.GetProductByBarcode(scannedBarcode)!
-                // Currently, we download the entire warehouse with every scan. This is acceptable for 50 items, but for 50,000 items, it significantly impacts performance.
-                var products = await _apiService.GetProducts();
-                var existingProduct = products?.FirstOrDefault(p => p.Barcode == scannedBarcode);
+                var currentProduct = await _apiService.GetProductByBarcodeAsync(scannedBarcode);
 
-                if (existingProduct != null)
+                if (currentProduct != null)
                 {
                     // ==========================================
                     // SCENARIO A: PRODUKT BEKANNT -> BESTAND UPDATE
                     // ==========================================
 
                     string action = await Shell.Current.DisplayActionSheet(
-                        $"{existingProduct.Name} ({existingProduct.Quantity}x in stock)",
+                        $"{currentProduct.Name} ({currentProduct.Quantity}x in stock)",
                         "Cancel", null, "Stock In (+)", "Stock Out (-)");
 
                     if (action == "Cancel" || string.IsNullOrEmpty(action))
@@ -62,20 +108,36 @@ namespace InventoryApp.Maui.ViewModels
 
                         if (!string.IsNullOrWhiteSpace(amountStr) && int.TryParse(amountStr, out int amount))
                         {
+                            // FAIL EARLY 1: Ist die Eingabe überhaupt eine gültige Zahl größer als 0?
+                            if (amount <= 0)
+                            {
+                                await App.Current.MainPage.DisplayAlert("Fehler", "Bitte eine Menge größer als 0 eingeben.", "OK");
+                                return; // Bricht die Methode hier sofort ab!
+                            }
+
                             if (action == "Stock In (+)")
                             {
-                                existingProduct.Quantity += amount;
+                                currentProduct.Quantity += amount;
+                                currentProduct.LastUpdatedByEmployeeId = App.CurrentEmployeeId;
                             }
                             else if (action == "Stock Out (-)")
                             {
-                                existingProduct.Quantity -= amount;
-                                // Sanity check: No negative stock possible
-                                if (existingProduct.Quantity < 0) existingProduct.Quantity = 0;
+                                // FAIL EARLY 2: Reicht der aktuelle Bestand für diese Entnahme?
+                                if (amount > currentProduct.Quantity)
+                                {
+                                    await App.Current.MainPage.DisplayAlert("Bestandsfehler", $"Nicht genug auf Lager! Es sind nur noch {currentProduct.Quantity} Stück da.", "OK");
+                                    return; // Bricht die Methode hier sofort ab, ES WIRD NICHTS GESPEICHERT!
+                                }
+
+                                // Wenn wir hier ankommen, ist die Entnahme zu 100 % gültig.
+                                currentProduct.Quantity -= amount;
+                                currentProduct.LastUpdatedByEmployeeId = App.CurrentEmployeeId;
                             }
 
-                            var success = await _apiService.UpdateProduct(existingProduct);
+                            // Dieser API-Aufruf passiert jetzt NUR NOCH, wenn alle Daten sauber und logisch sind.
+                            var success = await _apiService.UpdateProduct(currentProduct);
 
-                            ResultText = success ? $"{existingProduct.Name} updated! New stock: {existingProduct.Quantity}" : "Error updating!";
+                            ResultText = success ? $"{currentProduct.Name} updated! New stock: {currentProduct.Quantity}" : "Error updating!";
                             ResultColor = success ? Colors.Green : Colors.Red;
                         }
                         else
@@ -169,12 +231,21 @@ namespace InventoryApp.Maui.ViewModels
                 ResultText = $"Error: {ex.Message}";
                 ResultColor = Colors.Red;
             }
+            finally
+            {
+                // ==========================================
+                // FINALLY: Wird IMMER ausgeführt!
+                // Egal ob Fehler, erfolgreicher Scan oder Abbruch durch den User.
+                // ==========================================
 
-            // Scanner reset: Give the user a moment to read the result before the scanner is reactivated.
-            await Task.Delay(3000);
-            ResultText = "Point the camera at a barcode....";
-            ResultColor = Colors.Black;
-            IsDetecting = true;
-        }
+                // Gib dem User 2-3 Sekunden Zeit, das Ergebnis ("scan canceled." oder "saved!") zu lesen
+                await Task.Delay(3000);
+
+                // Scanner & UI wieder scharfschalten
+                ResultText = "Point the camera at a barcode....";
+                ResultColor = Colors.Black;
+                IsDetecting = true;
+            }
+ }
     }
 }

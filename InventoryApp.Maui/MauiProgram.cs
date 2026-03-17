@@ -54,6 +54,9 @@ namespace InventoryApp.Maui
             builder.Services.AddTransient<MainPage>();
             builder.Services.AddTransient<InventoryListViewModel>();
             builder.Services.AddTransient<InventoryListPage>();
+            // ... deine anderen builder.Services stehen hier ...
+            builder.Services.AddTransient<LoginViewModel>();
+            builder.Services.AddTransient<LoginPage>();
 
 #if DEBUG
             builder.Logging.AddDebug();
@@ -63,6 +66,4 @@ namespace InventoryApp.Maui
         }
     }
 }
-        }
-    }
-}
+        

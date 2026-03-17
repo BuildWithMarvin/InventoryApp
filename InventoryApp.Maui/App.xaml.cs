@@ -2,11 +2,16 @@
 {
     public partial class App : Application
     {
-        public App()
+        // Wir lassen uns die LoginPage vom Dependency Injection System (MauiProgram) geben
+
+        public static int CurrentEmployeeId { get; set; }
+        public App(LoginPage loginPage)
         {
             InitializeComponent();
 
-            MainPage = new AppShell();
+            // Architektur-Trick: Die allererste Seite ist jetzt der Login. 
+            // Erst wenn der erfolgreich ist, setzen wir MainPage = new AppShell();
+            MainPage = loginPage;
         }
     }
 }

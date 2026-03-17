@@ -15,8 +15,9 @@ builder.Services.AddDbContext<InventoryDbContext>(options =>
 
 var app = builder.Build();
 
+
 // IMPORTANT: Executes pending EF Core migrations directly when the app starts.
-// Saves us from having to manually execute SQL scripts in Azure when we change the tables.
+// Saves us from having to manually execute SQL Scripts in Azure when we change the tables.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();

@@ -17,6 +17,20 @@ namespace InventoryApp.Api.Controllers
             _context = context;
         }
 
+        // GET: api/products/barcode/123456789
+        [HttpGet("barcode/{barcode}")]
+        public async Task<ActionResult<Product>> GetProductByBarcode(string barcode)
+        {
+            var product = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == barcode);
+
+            if (product == null)
+            {
+                return NotFound(); // 404, wenn es das Produkt noch nicht gibt
+            }
+
+            return product;
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {

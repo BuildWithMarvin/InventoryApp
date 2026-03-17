@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="InventoryApp.Maui.LoginPage"
+             BackgroundColor="#F4F4F4">
+    
+        <VerticalStackLayout Spacing="20" Padding="30" VerticalOptions="Center">
+
+        <Label Text="🔒" FontSize="80" HorizontalOptions="Center" />
+
+        <Label Text="Lager gesperrt" FontSize="28" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#333" />
+        <Label Text="Bitte PIN-Code eingeben:" HorizontalOptions="Center" TextColor="Gray" />
+
+        <Border StrokeShape="RoundRectangle 15" 
+        BackgroundColor="White" 
+        WidthRequest="150" 
+        HorizontalOptions="Center">
+
+            <Entry Text="{Binding PinCode}" 
+           IsPassword="True" 
+           Keyboard="Numeric" 
+           MaxLength="4" 
+           FontSize="32" 
+           HorizontalTextAlignment="Center" 
+           BackgroundColor="Transparent" />
+        </Border>
+
+        <Label Text="{Binding ErrorMessage}" TextColor="Red" FontAttributes="Bold" HorizontalOptions="Center" />
+
+        <Button Text="Entsperren" 
+                Command="{Binding LoginCommand}" 
+                CornerRadius="8" 
+                BackgroundColor="#2B0B98" 
+                TextColor="Black"  
+                FontSize="18"
+                FontAttributes="Bold"
+                HeightRequest="50"
+                Margin="0,20,0,0"/>
+
+    </VerticalStackLayout>
+        
+</ContentPage>
