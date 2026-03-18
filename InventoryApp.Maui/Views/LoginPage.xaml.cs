@@ -1,6 +1,6 @@
 using InventoryApp.Maui.ViewModels;
 
-namespace InventoryApp.Maui
+namespace InventoryApp.Maui.Views
 {
     public partial class LoginPage : ContentPage
     {

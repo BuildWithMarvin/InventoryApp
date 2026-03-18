@@ -75,10 +75,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <MauiXaml Update="InventoryListPage.xaml">
+	  <Compile Update="Views\ScannerPage.xaml.cs">
+	    <DependentUpon>ScannerPage.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiXaml Update="Views\InventoryListPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="LoginPage.xaml">
+	  <MauiXaml Update="Views\LoginPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>

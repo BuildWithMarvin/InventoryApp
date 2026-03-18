@@ -5,13 +5,11 @@ using System.Windows.Input;
 using InventoryApp.Maui.Services;
 using InventoryApp.Maui.Models;
 
+
 namespace InventoryApp.Maui.ViewModels
 {
     public class InventoryListViewModel : INotifyPropertyChanged
     {
-        // ========================================================
-        // 1. INotifyPropertyChanged VERTRAG
-        // ========================================================
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -20,16 +18,9 @@ namespace InventoryApp.Maui.ViewModels
         }
 
         private readonly ApiService _apiService;
+        private readonly List<Product> _allProducts = new();
 
-        // Cache for local search.
-        private List<Product> _allProducts = new();
-
-        // List linked to the UI. Filled dynamically from _allProducts during search.
         public ObservableCollection<Product> Products { get; } = new();
-
-        // ========================================================
-        // 2. KLASSISCHE PROPERTIES
-        // ========================================================
 
         private string _title = "MyInventory";
         public string Title
@@ -69,46 +60,32 @@ namespace InventoryApp.Maui.ViewModels
                 {
                     _searchText = value;
                     OnPropertyChanged();
-
-                    // NEU: Statt der Toolkit-Magie rufen wir die Suche hier explizit auf!
                     PerformSearch(_searchText);
                 }
             }
         }
 
-        // ========================================================
-        // 3. KLASSISCHE COMMANDS
-        // ========================================================
         public ICommand LoadProductsAzureCommand { get; }
         public ICommand ProductSelectedCommand { get; }
 
-        // ========================================================
-        // 4. KONSTRUKTOR
-        // ========================================================
         public InventoryListViewModel(ApiService apiService)
         {
             _apiService = apiService;
-
-            // Commands mit den Methoden verknüpfen
-            LoadProductsAzureCommand = new Command(async () => await LoadProductsAzure());
-
-            // Wichtig: Command<Product>, da das XAML das angeklickte Produkt übergibt
-            ProductSelectedCommand = new Command<Product>(async (p) => await ProductSelected(p));
+            LoadProductsAzureCommand = new Command(async () => await LoadProductsAzureAsync());
+            ProductSelectedCommand = new Command<Product>(async (p) => await ProductSelectedAsync(p));
         }
 
-        // ========================================================
-        // 5. DEINE LOGIK (Unverändert)
-        // ========================================================
-
-        private async Task LoadProductsAzure()
+        /// <summary>
+        /// Fetches all products from the backend and updates the local collection.
+        /// </summary>
+        private async Task LoadProductsAzureAsync()
         {
             IsRefreshing = true;
 
             try
             {
-                // TODO (V2): For very large warehouses, switch to pagination .
-                // Currently, we load everything into the mobile phone's memory at once.
-                var productsFromDb = await _apiService.GetProducts();
+                // TODO (V2): Implement pagination. Currently loads the entire inventory into memory.
+                var productsFromDb = await _apiService.GetProductsAsync();
 
                 _allProducts.Clear();
                 Products.Clear();
@@ -134,30 +111,39 @@ namespace InventoryApp.Maui.ViewModels
             }
         }
 
-        // Diese Methode ersetzt das alte 'OnSearchTextChanged'
-        private void PerformSearch(string value)
+        /// <summary>
+        /// Filters the currently loaded products based on the search input.
+        /// </summary>
+        private void PerformSearch(string searchTerm)
         {
-            // Pure in-memory search (client-side filtering). Extremely fast because there is no network latency.
-            if (string.IsNullOrWhiteSpace(value))
+            if (string.IsNullOrWhiteSpace(searchTerm))
             {
                 Products.Clear();
-                foreach (var p in _allProducts) Products.Add(p);
+                foreach (var p in _allProducts)
+                {
+                    Products.Add(p);
+                }
                 return;
             }
 
             var filtered = _allProducts.Where(p =>
-                (p.Name != null && p.Name.Contains(value, StringComparison.OrdinalIgnoreCase)) ||
-                (p.Description != null && p.Description.Contains(value, StringComparison.OrdinalIgnoreCase)) ||
-                (p.Barcode != null && p.Barcode.Contains(value, StringComparison.OrdinalIgnoreCase))
+                (p.Name != null && p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                (p.Description != null && p.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                (p.Barcode != null && p.Barcode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
             ).ToList();
 
             Products.Clear();
-            foreach (var p in filtered) Products.Add(p);
+            foreach (var p in filtered)
+            {
+                Products.Add(p);
+            }
         }
 
-        private async Task ProductSelected(Product currentProduct)
+        /// <summary>
+        /// Handles the stock in/out process when a user selects a product.
+        /// </summary>
+        private async Task ProductSelectedAsync(Product currentProduct)
         {
-            // Sanity check: Intercept if the binding unexpectedly throws null from the UI.
             if (currentProduct == null) return;
 
             string action = await Shell.Current.DisplayActionSheet(
@@ -173,11 +159,10 @@ namespace InventoryApp.Maui.ViewModels
 
             if (!string.IsNullOrWhiteSpace(amountStr) && int.TryParse(amountStr, out int amount))
             {
-                // FAIL EARLY 1: Ist die Eingabe überhaupt eine gültige Zahl größer als 0?
                 if (amount <= 0)
                 {
-                    await App.Current.MainPage.DisplayAlert("Fehler", "Bitte eine Menge größer als 0 eingeben.", "OK");
-                    return; // Bricht die Methode hier sofort ab!
+                    await App.Current.MainPage.DisplayAlert("Error", "Please enter an amount greater than 0.", "OK");
+                    return;
                 }
 
                 if (action == "Stock In (+)")
@@ -187,29 +172,22 @@ namespace InventoryApp.Maui.ViewModels
                 }
                 else if (action == "Stock Out (-)")
                 {
-                    // FAIL EARLY 2: Reicht der aktuelle Bestand für diese Entnahme?
                     if (amount > currentProduct.Quantity)
                     {
-                        await App.Current.MainPage.DisplayAlert("Bestandsfehler", $"Nicht genug auf Lager! Es sind nur noch {currentProduct.Quantity} Stück da.", "OK");
-                        return; // Bricht die Methode hier sofort ab, ES WIRD NICHTS GESPEICHERT!
+                        await App.Current.MainPage.DisplayAlert("Stock Error", $"Not enough in stock! Only {currentProduct.Quantity} items remaining.", "OK");
+                        return;
                     }
 
-                    // Wenn wir hier ankommen, ist die Entnahme zu 100 % gültig.
                     currentProduct.Quantity -= amount;
                     currentProduct.LastUpdatedByEmployeeId = App.CurrentEmployeeId;
                 }
 
-                // Dieser API-Aufruf passiert jetzt NUR NOCH, wenn alle Daten sauber und logisch sind.
-                var success = await _apiService.UpdateProduct(currentProduct);
+                var success = await _apiService.UpdateProductAsync(currentProduct);
 
                 if (success)
                 {
                     await Shell.Current.DisplayAlert("Success", $"New stock: {currentProduct.Quantity}x", "OK");
-
-                    // TODO for V2: We are currently reloading the entire list from the backend 
-                    // just because ONE item has changed. Better: Only update the affected product in the local 
-                    // _allProducts. However, this is sufficient for the MVP for now.
-                    await LoadProductsAzure();
+                    await LoadProductsAzureAsync();
                 }
                 else
                 {

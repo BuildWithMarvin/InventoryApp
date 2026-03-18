@@ -4,21 +4,24 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
+using System.ComponentModel;
+using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Windows.Input;
+
+
 namespace InventoryApp.Maui.ViewModels
 {
-    public partial class MainViewModel : INotifyPropertyChanged
+    public partial class ScannerViewModel : INotifyPropertyChanged
     {
-        
         public event PropertyChangedEventHandler PropertyChanged;
-        private readonly ApiService _apiService;
-
-        // UI-State (is automatically converted into real properties by the MVVM Toolkit)
-        
 
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        private readonly ApiService _apiService;
 
         private bool _isDetecting = true;
         public bool IsDetecting
@@ -29,7 +32,7 @@ namespace InventoryApp.Maui.ViewModels
                 if (_isDetecting != value)
                 {
                     _isDetecting = value;
-                    OnPropertyChanged(); // Meldet der UI die Änderung
+                    OnPropertyChanged();
                 }
             }
         }
@@ -63,21 +66,22 @@ namespace InventoryApp.Maui.ViewModels
         }
 
         public ICommand ProcessBarcodeCommand { get; }
-       
 
-        public MainViewModel(ApiService apiService)
+        public ScannerViewModel(ApiService apiService)
         {
             _apiService = apiService;
-
-            // Commands mit den MAUI-Standard-Befehlen verknüpfen
             ProcessBarcodeCommand = new Command<string>(async (barcode) => await ProcessBarcodeAsync(barcode));
-            
         }
+
+        /// <summary>
+        /// Processes a scanned barcode. Checks if the product exists to update stock, 
+        /// or prompts the user to create a new product if it is unknown.
+        /// </summary>
         public async Task ProcessBarcodeAsync(string scannedBarcode)
         {
-            // Pause the scanner immediately so that it does not fire the same barcode 50 times per second. 
+            // Pause the scanner to prevent duplicate triggers while processing
             IsDetecting = false;
-            ResultText = $"Check barcode {scannedBarcode}...";
+            ResultText = $"Checking barcode {scannedBarcode}...";
             ResultColor = Colors.Orange;
 
             try
@@ -86,10 +90,7 @@ namespace InventoryApp.Maui.ViewModels
 
                 if (currentProduct != null)
                 {
-                    // ==========================================
-                    // SCENARIO A: PRODUKT BEKANNT -> BESTAND UPDATE
-                    // ==========================================
-
+                    // --- EXISTING PRODUCT: Update Stock ---
                     string action = await Shell.Current.DisplayActionSheet(
                         $"{currentProduct.Name} ({currentProduct.Quantity}x in stock)",
                         "Cancel", null, "Stock In (+)", "Stock Out (-)");
@@ -108,11 +109,10 @@ namespace InventoryApp.Maui.ViewModels
 
                         if (!string.IsNullOrWhiteSpace(amountStr) && int.TryParse(amountStr, out int amount))
                         {
-                            // FAIL EARLY 1: Ist die Eingabe überhaupt eine gültige Zahl größer als 0?
                             if (amount <= 0)
                             {
-                                await App.Current.MainPage.DisplayAlert("Fehler", "Bitte eine Menge größer als 0 eingeben.", "OK");
-                                return; // Bricht die Methode hier sofort ab!
+                                await Application.Current.MainPage.DisplayAlert("Error", "Please enter an amount greater than 0.", "OK");
+                                return;
                             }
 
                             if (action == "Stock In (+)")
@@ -122,20 +122,17 @@ namespace InventoryApp.Maui.ViewModels
                             }
                             else if (action == "Stock Out (-)")
                             {
-                                // FAIL EARLY 2: Reicht der aktuelle Bestand für diese Entnahme?
                                 if (amount > currentProduct.Quantity)
                                 {
-                                    await App.Current.MainPage.DisplayAlert("Bestandsfehler", $"Nicht genug auf Lager! Es sind nur noch {currentProduct.Quantity} Stück da.", "OK");
-                                    return; // Bricht die Methode hier sofort ab, ES WIRD NICHTS GESPEICHERT!
+                                    await Application.Current.MainPage.DisplayAlert("Stock Error", $"Not enough in stock! Only {currentProduct.Quantity} items remaining.", "OK");
+                                    return;
                                 }
 
-                                // Wenn wir hier ankommen, ist die Entnahme zu 100 % gültig.
                                 currentProduct.Quantity -= amount;
                                 currentProduct.LastUpdatedByEmployeeId = App.CurrentEmployeeId;
                             }
 
-                            // Dieser API-Aufruf passiert jetzt NUR NOCH, wenn alle Daten sauber und logisch sind.
-                            var success = await _apiService.UpdateProduct(currentProduct);
+                            var success = await _apiService.UpdateProductAsync(currentProduct);
 
                             ResultText = success ? $"{currentProduct.Name} updated! New stock: {currentProduct.Quantity}" : "Error updating!";
                             ResultColor = success ? Colors.Green : Colors.Red;
@@ -149,33 +146,25 @@ namespace InventoryApp.Maui.ViewModels
                 }
                 else
                 {
-
-                    // SCENARIO B: UNKNOWN PRODUCT -> CREATE NEW
-
-
-                    // We force the user to enter data using a while loop. 
-                    // Half records in the database will only cause problems later on.
-
+                    // --- UNKNOWN PRODUCT: Create New ---
                     string newName = "";
                     while (string.IsNullOrWhiteSpace(newName))
                     {
-                        newName = await Shell.Current.DisplayPromptAsync("Name (1/4)", "What is the name of this article? (required field!)", "Continue", "Cancel", "e.g. Coffee");
+                        newName = await Shell.Current.DisplayPromptAsync("Name (1/4)", "What is the name of this article? (required)", "Continue", "Cancel", "e.g. Coffee");
                         if (newName == null)
                         {
-                            ResultText = "scan canceled.";
-                            ResultColor = Colors.Gray;
-                            return; // emergency exit
+                            CancelScan("Scan canceled.");
+                            return;
                         }
                     }
 
                     string description = "";
                     while (string.IsNullOrWhiteSpace(description))
                     {
-                        description = await Shell.Current.DisplayPromptAsync("Description (2/4)", "Please enter a brief description:", "Continue", "Cancel", "e.g. outdoor-gear");
+                        description = await Shell.Current.DisplayPromptAsync("Description (2/4)", "Please enter a brief description:", "Continue", "Cancel", "e.g. Outdoor gear");
                         if (description == null)
                         {
-                            ResultText = "scan canceled.";
-                            ResultColor = Colors.Gray;
+                            CancelScan("Scan canceled.");
                             return;
                         }
                     }
@@ -184,11 +173,10 @@ namespace InventoryApp.Maui.ViewModels
                     int quantity = 0;
                     while (true)
                     {
-                        quantityStr = await Shell.Current.DisplayPromptAsync("Quantity (3/4)", $"How often have we '{newName}'?", "Continue", "Cancel", "e.g. 5", keyboard: Keyboard.Numeric);
+                        quantityStr = await Shell.Current.DisplayPromptAsync("Quantity (3/4)", $"How many items of '{newName}' are in stock?", "Continue", "Cancel", "e.g. 5", keyboard: Keyboard.Numeric);
                         if (quantityStr == null)
                         {
-                            ResultText = "scan canceled.";
-                            ResultColor = Colors.Gray;
+                            CancelScan("Scan canceled.");
                             return;
                         }
 
@@ -202,13 +190,13 @@ namespace InventoryApp.Maui.ViewModels
                         priceStr = await Shell.Current.DisplayPromptAsync("Price (4/4)", "How much does one piece cost?", "Save", "Cancel", "e.g. 2.99", keyboard: Keyboard.Numeric);
                         if (priceStr == null)
                         {
-                            ResultText = "scan canceled.";
-                            ResultColor = Colors.Gray;
+                            CancelScan("Scan canceled.");
                             return;
                         }
 
-                        // Pragmatic fix for the comma/full stop problem on different mobile phone keyboards (DE vs. EN)
-                        if (decimal.TryParse(priceStr.Replace(".", ","), out price)) break;
+                        // Robust parsing for both '.' and ',' regardless of the device's regional settings
+                        string normalizedPrice = priceStr.Replace(",", ".");
+                        if (decimal.TryParse(normalizedPrice, NumberStyles.Number, CultureInfo.InvariantCulture, out price)) break;
                     }
 
                     var newProduct = new Product
@@ -220,9 +208,9 @@ namespace InventoryApp.Maui.ViewModels
                         Barcode = scannedBarcode
                     };
 
-                    var success = await _apiService.AddProduct(newProduct);
+                    var success = await _apiService.AddProductAsync(newProduct);
 
-                    ResultText = success ? $"{newName} ({quantity}) stored!" : "error saving!";
+                    ResultText = success ? $"{newName} ({quantity}x) stored!" : "Error saving!";
                     ResultColor = success ? Colors.Green : Colors.Red;
                 }
             }
@@ -233,19 +221,21 @@ namespace InventoryApp.Maui.ViewModels
             }
             finally
             {
-                // ==========================================
-                // FINALLY: Wird IMMER ausgeführt!
-                // Egal ob Fehler, erfolgreicher Scan oder Abbruch durch den User.
-                // ==========================================
-
-                // Gib dem User 2-3 Sekunden Zeit, das Ergebnis ("scan canceled." oder "saved!") zu lesen
+                // Wait briefly to let the user read the result, then reset the scanner
                 await Task.Delay(3000);
-
-                // Scanner & UI wieder scharfschalten
-                ResultText = "Point the camera at a barcode....";
+                ResultText = "Point the camera at a barcode...";
                 ResultColor = Colors.Black;
                 IsDetecting = true;
             }
- }
+        }
+
+        /// <summary>
+        /// Helper method to cleanly reset the UI when a creation process is canceled.
+        /// </summary>
+        private void CancelScan(string message)
+        {
+            ResultText = message;
+            ResultColor = Colors.Gray;
+        }
     }
 }

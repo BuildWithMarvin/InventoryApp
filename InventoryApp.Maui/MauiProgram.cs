@@ -1,24 +1,23 @@
 ﻿using InventoryApp.Maui.Services;
 using InventoryApp.Maui.ViewModels;
+using InventoryApp.Maui.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 using ZXing.Net.Maui.Controls;
 
+
 namespace InventoryApp.Maui
 {
     public static class MauiProgram
     {
+        
         public static MauiApp CreateMauiApp()
         {
             var builder = MauiApp.CreateBuilder();
 
-            // 1. LOAD CONFIGURATION (appsettings.json)
-
+            // Load embedded configuration (appsettings.json)
             var assembly = Assembly.GetExecutingAssembly();
-
-            // Gotcha: The appsettings.json MUST be marked as an 
-            // “Embedded Resource” in Visual Studio, otherwise the stream will remain null.
             using var stream = assembly.GetManifestResourceStream("InventoryApp.Maui.appsettings.json");
 
             if (stream != null)
@@ -29,32 +28,26 @@ namespace InventoryApp.Maui
                 builder.Configuration.AddConfiguration(config);
             }
 
-
-            // 2. INITIALISE MAUI APP & PLUGINS
-
+            // Configure app, UI components, and plugins
             builder
-             .UseMauiApp<App>()
-              // Registers the native camera handlers (iOS/Android) from ZXing. 
-              // Without this line, the app crashes immediately when accessing the hardware.
-              .UseBarcodeReader()
+                .UseMauiApp<App>()
+                .UseBarcodeReader()
                 .ConfigureFonts(fonts =>
-                            {
-                                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                            });
+                {
+                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                });
 
-
-            // 3. DEPENDENCY INJECTION (IoC-Container)
-
-          
+            // Register Services (Singleton: Shared instance across the app)
             builder.Services.AddSingleton<ApiService>();
-            // Transient: Every time we call up a page, we want a fresh instance.
-            // This prevents ‘stuck’ UI states or memory leaks from previous scans.
-            builder.Services.AddTransient<MainViewModel>();
-            builder.Services.AddTransient<MainPage>();
+
+            // Register Views and ViewModels (Transient: Fresh instance per navigation)
+            builder.Services.AddTransient<ScannerViewModel>();
+            builder.Services.AddTransient<ScannerPage>();
+
             builder.Services.AddTransient<InventoryListViewModel>();
             builder.Services.AddTransient<InventoryListPage>();
-            // ... deine anderen builder.Services stehen hier ...
+
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<LoginPage>();
 
@@ -66,4 +59,3 @@ namespace InventoryApp.Maui
         }
     }
 }
-        

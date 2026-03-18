@@ -3,12 +3,11 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
+
 namespace InventoryApp.Maui.ViewModels
 {
-    // "partial" und "ObservableObject" sind weg, dafür klassisches Interface
     public class LoginViewModel : INotifyPropertyChanged
     {
-        // --- 1. Vertrag für INotifyPropertyChanged ---
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -18,7 +17,6 @@ namespace InventoryApp.Maui.ViewModels
 
         private readonly ApiService _apiService;
 
-        // --- 2. Klassische Properties (Backing Fields + Getter/Setter) ---
         private string _pinCode;
         public string PinCode
         {
@@ -30,7 +28,7 @@ namespace InventoryApp.Maui.ViewModels
                     _pinCode = value;
                     OnPropertyChanged();
 
-                    // NEU: Auto-Login! Sobald 4 Zeichen getippt wurden, feuert der Command.
+                    // Auto-submit when exactly 4 digits are entered
                     if (_pinCode?.Length == 4)
                     {
                         LoginCommand.Execute(null);
@@ -53,36 +51,66 @@ namespace InventoryApp.Maui.ViewModels
             }
         }
 
-        // --- 3. Klassischer Command ---
         public ICommand LoginCommand { get; }
 
-        // --- 4. Konstruktor ---
         public LoginViewModel(ApiService apiService)
         {
             _apiService = apiService;
-
-            // Command initialisieren und mit der Methode verknüpfen
             LoginCommand = new Command(async () => await LoginAsync());
         }
 
-        // --- 5. Logik (Unverändert, nur ohne Attribut) ---
+        /// <summary>
+        /// Attempts to authenticate the user with the entered PIN.
+        /// Handles the forced PIN change flow if required by the backend.
+        /// </summary>
         private async Task LoginAsync()
         {
             if (string.IsNullOrWhiteSpace(PinCode)) return;
 
-            ErrorMessage = "Prüfe PIN...";
+            ErrorMessage = "Verifying PIN...";
 
-            int? employeeId = await _apiService.LoginAsync(PinCode);
+            var employee = await _apiService.LoginAsync(PinCode);
 
-            if (employeeId.HasValue)
+            if (employee != null)
             {
-                App.CurrentEmployeeId = employeeId.Value;
-                ErrorMessage = "";
+                if (employee.MustChangePin)
+                {
+                    string newPin = await Application.Current.MainPage.DisplayPromptAsync(
+                        "New PIN Required",
+                        "Please set your personal, secret 4-digit PIN now:",
+                        "Save", "Cancel",
+                        "e.g., 9988",
+                        maxLength: 4,
+                        keyboard: Keyboard.Numeric);
+
+                    if (string.IsNullOrWhiteSpace(newPin) || newPin.Length != 4)
+                    {
+                        ErrorMessage = "PIN change cancelled or invalid.";
+                        PinCode = string.Empty;
+                        return;
+                    }
+
+                    bool success = await _apiService.ChangePinAsync(employee.Id, newPin);
+
+                    if (!success)
+                    {
+                        ErrorMessage = "Error saving the new PIN.";
+                        PinCode = string.Empty;
+                        return;
+                    }
+
+                    await Application.Current.MainPage.DisplayAlert("Success", "Your PIN has been changed successfully. You will now be logged in.", "OK");
+                }
+
+                App.CurrentEmployeeId = employee.Id;
+                ErrorMessage = string.Empty;
+
+                
                 Application.Current.MainPage = new AppShell();
             }
             else
             {
-                ErrorMessage = "❌ Falscher PIN-Code!";
+                ErrorMessage = "Invalid PIN code!";
                 PinCode = string.Empty;
             }
         }

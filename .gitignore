@@ -1,12 +1,39 @@
 ﻿# Visual Studio / .NET Standard Ignore
+# .NET / Visual Studio
+[Bb]in/
+[Oo]bj/
+out/
 .vs/
-bin/
-obj/
+.vscode/
 *.user
-*.suo
 *.userosscache
-*.sln.docstates
-packages/
+*.sln.doccache
+
+# Configuration & Secrets
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+secrets.json
+*.env
+
+# MAUI Specific
+.maui-hotreload/
+Generated\ Files/
+
+# NuGet Packages
 *.nupkg
+.nuget/
+packages/
+
+# OS Specific
 .DS_Store
-*.db
+Thumbs.db
+
+# Mobile Specific (Android/iOS)
+*.ap_
+*.apk
+*.dex
+*.pyc
+*.keystore
+!public.keystore
+proguard/

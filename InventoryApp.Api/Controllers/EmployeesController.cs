@@ -3,7 +3,6 @@ using InventoryApp.Api.Data;
 using InventoryApp.Api.Models; // (oder .Data)
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 namespace InventoryApp.Api.Controllers
 
 {
@@ -20,15 +19,14 @@ namespace InventoryApp.Api.Controllers
 
         // POST: api/employees/login
         // POST: api/employees/login
+        // Wieder sicher als POST, PIN ist im versteckten Body!
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] string pinCode)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            // Da wir keinen Benutzernamen haben, laden wir alle Mitarbeiter ins RAM
             var allEmployees = await _context.Employees.ToListAsync();
 
-            // Wir prüfen jeden Hash. BCrypt.Verify macht die mathematische Magie!
-            // Vorher: BCrypt.Verify(...)
-            var employee = allEmployees.FirstOrDefault(e => BCrypt.Net.BCrypt.Verify(pinCode, e.PinCode));
+            // Wir greifen jetzt auf request.PinCode zu
+            var employee = allEmployees.FirstOrDefault(e => BCrypt.Net.BCrypt.Verify(request.PinCode, e.PinCode));
 
             if (employee == null)
             {
@@ -59,6 +57,25 @@ namespace InventoryApp.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(newEmployee);
+        }
+        [HttpPost("change-pin")]
+        public async Task<IActionResult> ChangePin([FromBody] ChangePinRequest request)
+        {
+            var employee = await _context.Employees.FindAsync(request.EmployeeId);
+
+            if (employee == null)
+            {
+                return NotFound("Mitarbeiter nicht gefunden.");
+            }
+
+            // 1. Die neue PIN sicher verschlüsseln (BCrypt hast du ja schon eingebaut!)
+            employee.PinCode = BCrypt.Net.BCrypt.HashPassword(request.NewPin);
+
+            // 2. Den Zwang aufheben, da er jetzt eine eigene PIN hat
+            employee.MustChangePin = false;
+
+            await _context.SaveChangesAsync();
+            return Ok();
         }
     }
 }

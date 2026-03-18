@@ -1,4 +1,10 @@
-﻿namespace InventoryApp.Api.Models
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace InventoryApp.Maui.Models
 {
     public class Employee
     {
@@ -7,7 +13,6 @@
         public string PinCode { get; set; }
 
         // Indicates if the user needs to update their PIN on their next login
-        public bool MustChangePin { get; set; } = true;
-
+        public bool MustChangePin { get; set; }
     }
 }
