@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InventoryApp.Api.Controllers
 {
-    // [controller] automaticaly changes the URL to /api/products
     [Route("api/[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
@@ -17,7 +16,9 @@ namespace InventoryApp.Api.Controllers
             _context = context;
         }
 
-        // GET: api/products/barcode/123456789
+        /// <summary>
+        /// Retrieves a specific product by its barcode.
+        /// </summary>
         [HttpGet("barcode/{barcode}")]
         public async Task<ActionResult<Product>> GetProductByBarcode(string barcode)
         {
@@ -25,48 +26,72 @@ namespace InventoryApp.Api.Controllers
 
             if (product == null)
             {
-                return NotFound(); // 404, wenn es das Produkt noch nicht gibt
+                return NotFound();
             }
 
             return product;
         }
 
+        /// <summary>
+        /// Retrieves all products from the inventory.
+        /// </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {
-            // TODO for V2: Once the warehouse has 50,000 items, we will need to incorporate pagination (skip/take) here.
-            // For the start, it is perfectly sufficient to simply query everything completely.
+            // Note: For future scaling (e.g., > 50,000 items), consider implementing pagination (Skip/Take).
             return await _context.Products.ToListAsync();
         }
 
+        /// <summary>
+        /// Creates a new product in the database.
+        /// </summary>
         [HttpPost]
         public async Task<ActionResult<Product>> CreateProduct(Product product)
         {
             _context.Products.Add(product);
-
-            // EF Core automatically generates the new ID when saving (auto-increment in the database)
             await _context.SaveChangesAsync();
 
             return Ok(product);
         }
 
+        /// <summary>
+        /// Updates an existing product. Includes concurrency handling to prevent data loss 
+        /// when multiple workers edit the same product simultaneously.
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, Product product)
         {
-          
             if (id != product.Id)
             {
-                return BadRequest();
+                return BadRequest("Product ID mismatch.");
             }
 
-            // EF Core explicitly states: ‘Do not re-insert this record, but perform an UPDATE.’
             _context.Entry(product).State = EntityState.Modified;
 
-            // TODO: A try-catch block could be added here later, 
-            // in case two warehouse workers update the same product at exactly the same millisecond.
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ProductExists(id))
+                {
+                    return NotFound($"Product with ID {id} not found.");
+                }
+                else
+                {
+                    // The product exists, but was modified by someone else simultaneously.
+                    // Throwing the exception or returning Conflict() is best practice here.
+                    throw;
+                }
+            }
 
-            return NoContent(); // 204 Success (standard response for successful PUT without return data)
+            return NoContent();
+        }
+
+        private bool ProductExists(int id)
+        {
+            return _context.Products.Any(e => e.Id == id);
         }
     }
 }

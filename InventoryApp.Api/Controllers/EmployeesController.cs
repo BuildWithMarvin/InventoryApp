@@ -1,10 +1,10 @@
-﻿using BCrypt.Net;
-using InventoryApp.Api.Data;
-using InventoryApp.Api.Models; // (oder .Data)
+﻿using InventoryApp.Api.Data;
+using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-namespace InventoryApp.Api.Controllers
 
+
+namespace InventoryApp.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -17,40 +17,42 @@ namespace InventoryApp.Api.Controllers
             _context = context;
         }
 
-        // POST: api/employees/login
-        // POST: api/employees/login
-        // Wieder sicher als POST, PIN ist im versteckten Body!
+        /// <summary>
+        /// Authenticates an employee using their secret PIN.
+        /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            // Note: Since login is PIN-only (no username to filter by), we must load all hashes to verify.
+            // This is acceptable for small to medium warehouse teams, but would require a 
+            // username/ID identifier to scale to thousands of users efficiently.
             var allEmployees = await _context.Employees.ToListAsync();
 
-            // Wir greifen jetzt auf request.PinCode zu
             var employee = allEmployees.FirstOrDefault(e => BCrypt.Net.BCrypt.Verify(request.PinCode, e.PinCode));
 
             if (employee == null)
             {
-                return Unauthorized("Falscher PIN-Code.");
+                return Unauthorized("Invalid PIN code.");
             }
 
             return Ok(employee);
         }
 
-        // POST: api/employees
+        /// <summary>
+        /// Creates a new employee and securely hashes their initial PIN.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateEmployee([FromBody] Employee newEmployee)
         {
             var allEmployees = await _context.Employees.ToListAsync();
 
-            // Prüfen, ob der PIN schon belegt ist
+            // Ensure the PIN is unique across the company
             if (allEmployees.Any(e => BCrypt.Net.BCrypt.Verify(newEmployee.PinCode, e.PinCode)))
-
-            // Vorher: BCrypt.HashPassword(...)
             {
-                return BadRequest("Dieser PIN wird bereits verwendet!");
+                return BadRequest("This PIN is already in use.");
             }
 
-            // HIER PASSIERT DIE MAGIE: Aus "1234" wird ein unlesbarer Hash!
+            // Hash the password before saving to the database
             newEmployee.PinCode = BCrypt.Net.BCrypt.HashPassword(newEmployee.PinCode);
 
             _context.Employees.Add(newEmployee);
@@ -58,6 +60,10 @@ namespace InventoryApp.Api.Controllers
 
             return Ok(newEmployee);
         }
+
+        /// <summary>
+        /// Allows an employee to change their PIN and clears the 'MustChangePin' requirement flag.
+        /// </summary>
         [HttpPost("change-pin")]
         public async Task<IActionResult> ChangePin([FromBody] ChangePinRequest request)
         {
@@ -65,16 +71,14 @@ namespace InventoryApp.Api.Controllers
 
             if (employee == null)
             {
-                return NotFound("Mitarbeiter nicht gefunden.");
+                return NotFound("Employee not found.");
             }
 
-            // 1. Die neue PIN sicher verschlüsseln (BCrypt hast du ja schon eingebaut!)
             employee.PinCode = BCrypt.Net.BCrypt.HashPassword(request.NewPin);
-
-            // 2. Den Zwang aufheben, da er jetzt eine eigene PIN hat
             employee.MustChangePin = false;
 
             await _context.SaveChangesAsync();
+
             return Ok();
         }
     }

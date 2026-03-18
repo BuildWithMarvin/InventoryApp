@@ -1,6 +1,6 @@
 using InventoryApp.Maui.ViewModels;
 
-namespace InventoryApp.Maui.Views // <-- Namespace an den neuen Ordner angepasst
+namespace InventoryApp.Maui.Views 
 {
     /// <summary>
     /// The UI view displaying the list of all inventory items.

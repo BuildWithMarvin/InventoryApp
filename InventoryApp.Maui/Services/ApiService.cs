@@ -7,9 +7,7 @@ using System.Diagnostics;
 
 namespace InventoryApp.Maui.Services
 {
-    // Die Properties müssen exakt so heißen wie im JSON vom Azure-Backend.
-   
-
+    
     public class ApiService
     {
         private readonly HttpClient _httpClient;
