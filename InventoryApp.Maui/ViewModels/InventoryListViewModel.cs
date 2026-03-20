@@ -5,7 +5,6 @@ using System.Windows.Input;
 using InventoryApp.Maui.Services;
 using InventoryApp.Maui.Models;
 
-
 namespace InventoryApp.Maui.ViewModels
 {
     public class InventoryListViewModel : INotifyPropertyChanged
@@ -84,7 +83,7 @@ namespace InventoryApp.Maui.ViewModels
 
             try
             {
-                // TODO (V2): Implement pagination. Currently loads the entire inventory into memory.
+                // Note: For future scaling, consider implementing pagination.
                 var productsFromDb = await _apiService.GetProductsAsync();
 
                 _allProducts.Clear();
@@ -182,16 +181,26 @@ namespace InventoryApp.Maui.ViewModels
                     currentProduct.LastUpdatedByEmployeeId = App.CurrentEmployeeId;
                 }
 
-                var success = await _apiService.UpdateProductAsync(currentProduct);
-
-                if (success)
+                try
                 {
+                    // Attempt to push the updated stock to the API
+                    await _apiService.UpdateProductAsync(currentProduct);
+
                     await Shell.Current.DisplayAlert("Success", $"New stock: {currentProduct.Quantity}x", "OK");
                     await LoadProductsAzureAsync();
                 }
-                else
+                catch (InvalidOperationException ex)
                 {
-                    await Shell.Current.DisplayAlert("Error", "Update failed on Azure!", "OK");
+                    // Handle HTTP 409 Conflict: Another employee modified this item in the meantime.
+                    await Shell.Current.DisplayAlert("Conflict", ex.Message, "OK");
+
+                    // Reload the list to display the most recent data from the server.
+                    await LoadProductsAzureAsync();
+                }
+                catch (Exception ex)
+                {
+                    // Catch generic network or server errors.
+                    await Shell.Current.DisplayAlert("Error", $"Update failed: {ex.Message}", "OK");
                 }
             }
         }

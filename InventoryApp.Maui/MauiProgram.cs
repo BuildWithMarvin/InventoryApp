@@ -51,7 +51,7 @@ namespace InventoryApp.Maui
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<LoginPage>();
 
-#if DEBUG
+#if DEBU
             builder.Logging.AddDebug();
 #endif
 

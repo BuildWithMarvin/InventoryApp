@@ -80,9 +80,9 @@ namespace InventoryApp.Api.Controllers
                 }
                 else
                 {
-                    // The product exists, but was modified by someone else simultaneously.
-                    // Throwing the exception or returning Conflict() is best practice here.
-                    throw;
+                    // Collision! Another user updated the product in the meantime.
+                    // We return a 409 Conflict status code so the app knows exactly what happened.
+                    return Conflict("Conflict: Another user is currently editing this article. Please refresh the page.");
                 }
             }
 
