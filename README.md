@@ -15,7 +15,6 @@ A cross-platform mobile application built with **.NET MAUI** and **C#** to strea
 
 ## Tech Stack & Architecture
 
-<meta name="google-site-verification" content="rHo4BzEMXzBHq12dc6mDhCPwkwq6caDkF_qGHcFAqIg" />
 
 * **Frontend:** .NET MAUI (iOS & Android)
 * **Architecture:** MVVM (Model-View-ViewModel) for clean separation of concerns.
