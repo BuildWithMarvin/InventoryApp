@@ -13,7 +13,7 @@ namespace InventoryApp.Api.Controllers
 
         public ProductsController(InventoryDbContext context)
         {
-            _context = context;
+            _context = context; 
         }
 
         /// <summary>

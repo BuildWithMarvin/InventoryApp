@@ -1,43 +1,45 @@
-# Inventory Management App (.NET MAUI)
+# InventoryApp (MAUI Proof of Concept)
 
-A cross-platform mobile application built with **.NET MAUI** and **C#** to streamline warehouse and inventory management. This app allows employees to securely log in, scan product barcodes using the device camera, and manage stock levels in real-time via a cloud-based Azure backend.
+This is a Proof of Concept (PoC) mobile app I built to dive deeper into cross-platform development with .NET MAUI and C#. The core idea is a straightforward warehouse management tool where employees can scan barcodes, check stock, and update inventory against a cloud-hosted Azure backend. 
 
-## Key Features
+## What it actually does
 
-* **Secure Employee Authentication:** * PIN-based login system for quick access.
-    * Enforced PIN-change workflow for new setups or administrative resets.
-* **Integrated Barcode Scanning:** * Fast and reliable barcode detection using the device's camera.
-    * Directly fetches product details from the Azure database.
-* **Real-Time Stock Management:** * Quick **"Stock In (+)"** and **"Stock Out (-)"** actions.
-    * Automatic validation prevents stock levels from dropping below zero.
-* **Dynamic Product Creation:** * If an unknown barcode is scanned, the app guides the user through a quick step-by-step process to create and categorize the new product directly on the shop floor.
-* **High-Performance Search:** * In-memory filtering allows lightning-fast search by name, description, or barcode without network latency.
+* **Camera Barcode Scanning:** Uses the device camera to read barcodes and fetches the corresponding product details directly from the Azure SQL database.
+* **On-the-fly Product Creation:** If an employee scans a barcode that isn't in the system yet, the app prompts them to create and categorize the new item right there on the shop floor.
+* **Stock Management:** Simple "+ / -" actions for checking items in and out, including basic validation so stock levels don't drop below zero.
+* **Employee Access:** A basic PIN-based login system, including workflows for mandatory PIN changes (e.g., after an admin reset).
+* **Local Search:** In-memory filtering allows for quick searches by name or barcode without constantly hitting the API.
 
-## Tech Stack & Architecture
+## Under the Hood
 
+* **Frontend:** .NET MAUI (iOS & Android) using the MVVM pattern for a clean separation of UI and logic.
+* **Backend:** ASP.NET Core Web API, hosted on Microsoft Azure.
 
-* **Frontend:** .NET MAUI (iOS & Android)
-* **Architecture:** MVVM (Model-View-ViewModel) for clean separation of concerns.
-* **Backend:** ASP.NET Core Web API (Hosted on Microsoft Azure)
-* **Communication:** RESTful API using `HttpClient` and `System.Text.Json`.
+## Testing & Stability
 
-## Roadmap & Work in Progress
+To keep the core API endpoints reliable, the backend is covered by an xUnit test suite running against an EF Core In-Memory database. 
 
-This project is continuously being improved. The next major focus is the expansion of the **Administrative Features**:
+Current coverage for the `ProductsController` includes:
+* **GET Operations:** Verifying successful product retrieval and making sure the API correctly handles missing records (returning clean 404s).
+* **PUT Operations:** Testing the full update cycle (HTTP 204). More importantly, I added tests for edge cases: blocking updates for non-existent IDs (404) and intercepting ID mismatches between the URL route and the JSON payload (HTTP 400) to prevent data manipulation.
+* *Technical detail:* To properly simulate isolated, stateless HTTP requests, the tests explicitly clear the EF Core `ChangeTracker` before the act-phase. This prevents the In-Memory DB from falsely passing tests due to cached objects.
 
-* [ ] **Admin Dashboard:** A dedicated area for warehouse managers to oversee total stock value and recent movements.
-* [ ] **Employee Management:** UI to create new employee profiles, assign roles, and force PIN resets remotely.
-* [ ] **Pagination for Large Inventories:** Implementing API-side pagination for warehouses with thousands of items to optimize mobile memory usage.
-* [ ] **Offline Sync:** Basic offline capabilities for areas with poor warehouse Wi-Fi.
+## Current Focus & Next Steps
 
-## Getting Started (Local Development)
+Right now, the app works great for basic inventory tracking, but it needs some heavy lifting to scale up for actual warehouse environments. My next goals for the project are:
 
-To run this project locally, you will need Visual Studio 2022 with the **.NET MAUI workload** installed.
+* **Handling larger datasets:** The mobile app will crash if a warehouse has thousands of items. I need to implement proper API-side pagination next to keep memory usage low on mobile devices.
+* **Administrative features:** Building a basic admin UI where managers can manage employee profiles, assign roles, and trigger PIN resets.
+* **Dashboard & Analytics:** A simple overview for managers to see total stock value and a live log of recent stock movements.
+* **Offline resilience:** Warehouses often have terrible Wi-Fi. I want to look into basic offline caching/syncing so the app doesn't just die when the connection drops.
 
-1. Clone this repository.
-2. Open the solution in Visual Studio.
-3. Update the `_apiUrl` in the `ApiService` to point to your local or Azure backend environment.
-4. Select your target emulator (Android/iOS) or physical device and hit Run.
+## Running it locally
+
+You'll need Visual Studio 2022 with the **.NET MAUI workload** installed.
+
+1. Clone this repository and open the solution.
+2. Check your `appsettings.json` (or `ApiService`) and update the base URLs to point to your local API instance or your active Azure backend.
+3. Select your target emulator (Android/iOS) or plug in a physical device and hit run.
 
 ---
-*Developed by Marvin*
+*Built by Marvin*
