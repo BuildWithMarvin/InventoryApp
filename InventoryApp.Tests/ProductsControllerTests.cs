@@ -50,7 +50,7 @@ namespace InventoryApp.Tests
             var newProduct = new Product
             {
                 Id = 1,
-                Name = "Test-Artikel",
+                Name = "Test-articel",
                 Barcode = "12345678"
             };
 
@@ -79,7 +79,7 @@ namespace InventoryApp.Tests
             var originalProduct = new Product
             {
                 Id = 1,
-                Name = "Altes Produkt",
+                Name = "Old product",
                 Barcode = "12345678"
             };
             context.Products.Add(originalProduct);
@@ -92,7 +92,7 @@ namespace InventoryApp.Tests
             var updatedProduct = new Product
             {
                 Id = 1,
-                Name = "Neues Produkt (Geändert!)", // Wir haben den Namen geändert
+                Name = "New product (Updated!)", // Wir haben den Namen geändert
                 Barcode = "12345678"
             };
 
@@ -104,7 +104,51 @@ namespace InventoryApp.Tests
         
             var productInDb = await context.Products.FindAsync(1);
             Assert.NotNull(productInDb);
-            Assert.Equal("Neues Produkt (Geändert!)", productInDb.Name);
+            Assert.Equal("New product (Updated!)", productInDb.Name);
+        }
+
+        [Fact]
+        public async Task UpdateProduct_ReturnsNotFound_WhenProductDoesNotExist()
+        {
+            // 1. ARRANGE
+            using var context = GetDatabaseContext();
+            var controller = new ProductsController(context);
+
+            // Wir erstellen ein Objekt, aber speichern es NICHT in der Datenbank (DB ist leer)
+            var nonExistentProduct = new Product
+            {
+                Id = 999,
+                Name = "Phantom-product",
+                Barcode = "00000000"
+            };
+
+            
+            var result = await controller.UpdateProduct(999, nonExistentProduct);
+
+          
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task UpdateProduct_ReturnsBadRequest_WhenIdsDoNotMatch()
+        {
+        
+            using var context = GetDatabaseContext();
+            var controller = new ProductsController(context);
+
+            var mismatchedProduct = new Product
+            {
+                Id = 2, 
+                Name = "Manipulated artikel",
+                Barcode = "11112222"
+            };
+
+        
+            var result = await controller.UpdateProduct(1, mismatchedProduct);
+
+            Assert.IsType<BadRequestObjectResult>(result);
         }
     }
+
+
 }
