@@ -22,6 +22,7 @@ namespace InventoryApp.Api.Controllers
         [HttpGet("barcode/{barcode}")]
         public async Task<ActionResult<Product>> GetProductByBarcode(string barcode)
         {
+           
             var product = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == barcode);
 
             if (product == null)
@@ -48,16 +49,13 @@ namespace InventoryApp.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<Product>> CreateProduct(Product product)
         {
+            product.RowVersion = Guid.NewGuid().ToString();
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
-
             return Ok(product);
         }
 
-        /// <summary>
-        /// Updates an existing product. Includes concurrency handling to prevent data loss 
-        /// when multiple workers edit the same product simultaneously.
-        /// </summary>
+        
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, Product product)
         {
@@ -65,8 +63,9 @@ namespace InventoryApp.Api.Controllers
             {
                 return BadRequest("Product ID mismatch.");
             }
-
+           
             _context.Entry(product).State = EntityState.Modified;
+            product.RowVersion = Guid.NewGuid().ToString();
 
             try
             {

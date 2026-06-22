@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryApp.Maui", "Invent
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryApp.Tests", "InventoryApp.Tests\InventoryApp.Tests.csproj", "{A104A741-DC03-427D-9619-97B0C708D6DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{FB3876BF-B165-44D4-8518-EB08D591DBBC}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,10 +29,6 @@ Global
 		{A104A741-DC03-427D-9619-97B0C708D6DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A104A741-DC03-427D-9619-97B0C708D6DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A104A741-DC03-427D-9619-97B0C708D6DB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FB3876BF-B165-44D4-8518-EB08D591DBBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FB3876BF-B165-44D4-8518-EB08D591DBBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FB3876BF-B165-44D4-8518-EB08D591DBBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FB3876BF-B165-44D4-8518-EB08D591DBBC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

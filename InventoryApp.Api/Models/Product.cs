@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace InventoryApp.Api.Models
 {
@@ -8,6 +9,9 @@ namespace InventoryApp.Api.Models
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public int Quantity { get; set; }
+
+        [ConcurrencyCheck]
+        public string RowVersion { get; set; }
 
         [Precision(18, 2)]
         public decimal Price { get; set; }

@@ -1,28 +1,32 @@
 # InventoryApp (MAUI Proof of Concept)
 
-This is a Proof of Concept (PoC) mobile app I built to dive deeper into cross-platform development with .NET MAUI and C#. The core idea is a straightforward warehouse management tool where employees can scan barcodes, check stock, and update inventory against a cloud-hosted Azure backend. 
+Proof-of-concept inventory management app built with .NET MAUI and ASP.NET Core.employees can scan barcodes, check stock, and update inventory against a cloud hosted Azure backend.
+
+The application allows warehouse employees to scan barcodes, manage stock levels, and synchronize inventory data with an Azure-hosted backend.
 
 ## What it actually does
 
 * **Camera Barcode Scanning:** Uses the device camera to read barcodes and fetches the corresponding product details directly from the Azure SQL database.
 * **On-the-fly Product Creation:** If an employee scans a barcode that isn't in the system yet, the app prompts them to create and categorize the new item right there on the shop floor.
 * **Stock Management:** Simple "+ / -" actions for checking items in and out, including basic validation so stock levels don't drop below zero.
-* **Employee Access:** A basic PIN-based login system, including workflows for mandatory PIN changes (e.g., after an admin reset).
+* **Employee Access:** A basic PIN based login system, including workflows for mandatory PIN changes (e.g., after an admin reset).
 * **Local Search:** In-memory filtering allows for quick searches by name or barcode without constantly hitting the API.
 
-## Under the Hood
+## Architecture
 
 * **Frontend:** .NET MAUI (iOS & Android) using the MVVM pattern for a clean separation of UI and logic.
 * **Backend:** ASP.NET Core Web API, hosted on Microsoft Azure.
 
-## Testing & Stability
+## Testing
 
-To keep the core API endpoints reliable, the backend is covered by an xUnit test suite running against an EF Core In-Memory database. 
+The backend is covered by an xUnit test suite using EF Core In-Memory testing.
+ 
+Covered scenarios include:
 
-Current coverage for the `ProductsController` includes:
-* **GET Operations:** Verifying successful product retrieval and making sure the API correctly handles missing records (returning clean 404s).
-* **PUT Operations:** Testing the full update cycle (HTTP 204). More importantly, I added tests for edge cases: blocking updates for non-existent IDs (404) and intercepting ID mismatches between the URL route and the JSON payload (HTTP 400) to prevent data manipulation.
-* *Technical detail:* To properly simulate isolated, stateless HTTP requests, the tests explicitly clear the EF Core `ChangeTracker` before the act-phase. This prevents the In-Memory DB from falsely passing tests due to cached objects.
+* Product retrieval and 404 handling
+* Product updates and validation
+* Route/payload ID mismatch detection
+* Optimistic concurrency protection (HTTP 409 Conflict)
 
 ## Current Focus & Next Steps
 
@@ -42,4 +46,5 @@ You'll need Visual Studio 2022 with the **.NET MAUI workload** installed.
 3. Select your target emulator (Android/iOS) or plug in a physical device and hit run.
 
 ---
+
 *Built by Marvin*

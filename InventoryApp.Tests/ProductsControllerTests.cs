@@ -33,7 +33,6 @@ namespace InventoryApp.Tests
             var context = GetDatabaseContext();
             var controller = new ProductsController(context);
 
-            
             var result = await controller.GetProductByBarcode("99999999");
 
             Assert.IsType<NotFoundResult>(result.Result);
@@ -82,6 +81,8 @@ namespace InventoryApp.Tests
                 Name = "Old product",
                 Barcode = "12345678"
             };
+
+            originalProduct.RowVersion = Guid.NewGuid().ToString();
             context.Products.Add(originalProduct);
             await context.SaveChangesAsync();
 
@@ -92,8 +93,9 @@ namespace InventoryApp.Tests
             var updatedProduct = new Product
             {
                 Id = 1,
-                Name = "New product (Updated!)", // Wir haben den Namen geändert
-                Barcode = "12345678"
+                Name = "New product (Updated!)",
+                Barcode = "12345678",
+                RowVersion = originalProduct.RowVersion
             };
 
             var result = await controller.UpdateProduct(1, updatedProduct);
@@ -147,6 +149,32 @@ namespace InventoryApp.Tests
             var result = await controller.UpdateProduct(1, mismatchedProduct);
 
             Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task UpdateProduct_ReturnsConflict_WhenConcurrencyOccurs()
+        {
+            
+            using var context = GetDatabaseContext();
+            var controller = new ProductsController(context);
+
+            var originalProduct = new Product { Id = 1, Name = "Lager-Artikel", Barcode = "999" };
+            originalProduct.RowVersion = Guid.NewGuid().ToString();
+            context.Products.Add(originalProduct);
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var productUserA = await context.Products.FindAsync(1);
+            productUserA.Name = "Lager-Artikel (Geändert von A)";
+            productUserA.RowVersion = Guid.NewGuid().ToString();
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+          var productUserB = new Product { Id = 1, Name = "Lager-Artikel (Geändert von B)", Barcode = "999", RowVersion = originalProduct.RowVersion };
+
+            var result = await controller.UpdateProduct(1, productUserB);
+
+            Assert.IsType<ConflictObjectResult>(result);
         }
     }
 
