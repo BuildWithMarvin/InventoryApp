@@ -2,12 +2,11 @@
 
 Proof-of-concept inventory management app built with .NET MAUI and ASP.NET Core.employees can scan barcodes, check stock, and update inventory against a cloud hosted Azure backend.
 
-The application allows warehouse employees to scan barcodes, manage stock levels, and synchronize inventory data with an Azure-hosted backend.
 
 ## What it actually does
 
 * **Camera Barcode Scanning:** Uses the device camera to read barcodes and fetches the corresponding product details directly from the Azure SQL database.
-* **On-the-fly Product Creation:** If an employee scans a barcode that isn't in the system yet, the app prompts them to create and categorize the new item right there on the shop floor.
+* **Dynamic Product Creation:** If an employee scans a barcode that isn't in the system yet, the app prompts them to create and categorize the new item right there on the shop floor.
 * **Stock Management:** Simple "+ / -" actions for checking items in and out, including basic validation so stock levels don't drop below zero.
 * **Employee Access:** A basic PIN based login system, including workflows for mandatory PIN changes (e.g., after an admin reset).
 * **Local Search:** In-memory filtering allows for quick searches by name or barcode without constantly hitting the API.
@@ -30,7 +29,7 @@ Covered scenarios include:
 
 ## Current Focus & Next Steps
 
-Right now, the app works great for basic inventory tracking, but it needs some heavy lifting to scale up for actual warehouse environments. My next goals for the project are:
+Right now, the app works for basic inventory tracking but is not yet designed for production use. Planned expansions for the project are:
 
 * **Handling larger datasets:** The mobile app will crash if a warehouse has thousands of items. I need to implement proper API-side pagination next to keep memory usage low on mobile devices.
 * **Administrative features:** Building a basic admin UI where managers can manage employee profiles, assign roles, and trigger PIN resets.
