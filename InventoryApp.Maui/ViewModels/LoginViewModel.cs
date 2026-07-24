@@ -1,8 +1,9 @@
 ﻿using InventoryApp.Maui.Services;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows.Input;
-
+using Microsoft.Maui.Controls;
 
 namespace InventoryApp.Maui.ViewModels
 {
@@ -17,22 +18,17 @@ namespace InventoryApp.Maui.ViewModels
 
         private readonly ApiService _apiService;
 
-        private string _pinCode;
-        public string PinCode
+        private string _badgeBarcode;
+        public string BadgeBarcode
         {
-            get => _pinCode;
+            get => _badgeBarcode;
             set
             {
-                if (_pinCode != value)
+                if (_badgeBarcode != value)
                 {
-                    _pinCode = value;
+                    _badgeBarcode = value;
                     OnPropertyChanged();
-
-                    // Auto-submit when exactly 4 digits are entered
-                    if (_pinCode?.Length == 4)
-                    {
-                        LoginCommand.Execute(null);
-                    }
+                   
                 }
             }
         }
@@ -59,59 +55,27 @@ namespace InventoryApp.Maui.ViewModels
             LoginCommand = new Command(async () => await LoginAsync());
         }
 
-        /// <summary>
-        /// Attempts to authenticate the user with the entered PIN.
-        /// Handles the forced PIN change flow if required by the backend.
-        /// </summary>
+      
         private async Task LoginAsync()
         {
-            if (string.IsNullOrWhiteSpace(PinCode)) return;
+            if (string.IsNullOrWhiteSpace(BadgeBarcode)) return;
 
-            ErrorMessage = "Verifying PIN...";
+            ErrorMessage = "Check ID...";
 
-            var employee = await _apiService.LoginAsync(PinCode);
+            
+            var employee = await _apiService.LoginAsync(BadgeBarcode);
 
             if (employee != null)
             {
-                if (employee.MustChangePin)
-                {
-                    string newPin = await Application.Current.MainPage.DisplayPromptAsync(
-                        "New PIN Required",
-                        "Please set your personal, secret 4-digit PIN now:",
-                        "Save", "Cancel",
-                        "e.g., 9988",
-                        maxLength: 4,
-                        keyboard: Keyboard.Numeric);
-
-                    if (string.IsNullOrWhiteSpace(newPin) || newPin.Length != 4)
-                    {
-                        ErrorMessage = "PIN change cancelled or invalid.";
-                        PinCode = string.Empty;
-                        return;
-                    }
-
-                    bool success = await _apiService.ChangePinAsync(employee.Id, newPin);
-
-                    if (!success)
-                    {
-                        ErrorMessage = "Error saving the new PIN.";
-                        PinCode = string.Empty;
-                        return;
-                    }
-
-                    await Application.Current.MainPage.DisplayAlert("Success", "Your PIN has been changed successfully. You will now be logged in.", "OK");
-                }
-
                 App.CurrentEmployeeId = employee.Id;
                 ErrorMessage = string.Empty;
 
-                
                 Application.Current.MainPage = new AppShell();
             }
             else
             {
-                ErrorMessage = "Invalid PIN code!";
-                PinCode = string.Empty;
+                ErrorMessage = "Invalid employee ID card";
+                BadgeBarcode = string.Empty;
             }
         }
     }

@@ -74,9 +74,6 @@ namespace InventoryApp.Maui.ViewModels
             ProductSelectedCommand = new Command<Product>(async (p) => await ProductSelectedAsync(p));
         }
 
-        /// <summary>
-        /// Fetches all products from the backend and updates the local collection.
-        /// </summary>
         private async Task LoadProductsAzureAsync()
         {
             IsRefreshing = true;

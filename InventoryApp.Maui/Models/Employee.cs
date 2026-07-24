@@ -10,9 +10,8 @@ namespace InventoryApp.Maui.Models
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public string PinCode { get; set; }
 
-        // Indicates if the user needs to update their PIN on their next login
-        public bool MustChangePin { get; set; }
+        public string BadgeBarcode { get; set; }
+        public string Role { get; set; } = "User";
     }
 }

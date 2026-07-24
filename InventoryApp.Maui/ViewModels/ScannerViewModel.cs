@@ -69,10 +69,6 @@ namespace InventoryApp.Maui.ViewModels
             ProcessBarcodeCommand = new Command<string>(async (barcode) => await ProcessBarcodeAsync(barcode));
         }
 
-        /// <summary>
-        /// Processes a scanned barcode. Checks if the product exists to update stock, 
-        /// or prompts the user to create a new product if it is unknown.
-        /// </summary>
         public async Task ProcessBarcodeAsync(string scannedBarcode)
         {
             // Pause the scanner to prevent duplicate triggers while processing
@@ -86,7 +82,7 @@ namespace InventoryApp.Maui.ViewModels
 
                 if (currentProduct != null)
                 {
-                    // --- EXISTING PRODUCT: Update Stock ---
+                   
                     string action = await Shell.Current.DisplayActionSheet(
                         $"{currentProduct.Name} ({currentProduct.Quantity}x in stock)",
                         "Cancel", null, "Stock In (+)", "Stock Out (-)");
@@ -142,7 +138,7 @@ namespace InventoryApp.Maui.ViewModels
                 }
                 else
                 {
-                    // --- UNKNOWN PRODUCT: Create New ---
+                   
                     string newName = "";
                     while (string.IsNullOrWhiteSpace(newName))
                     {
@@ -190,7 +186,7 @@ namespace InventoryApp.Maui.ViewModels
                             return;
                         }
 
-                        // Robust parsing for both '.' and ',' regardless of the device's regional settings
+                       
                         string normalizedPrice = priceStr.Replace(",", ".");
                         if (decimal.TryParse(normalizedPrice, NumberStyles.Number, CultureInfo.InvariantCulture, out price)) break;
                     }

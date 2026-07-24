@@ -1,13 +1,23 @@
-﻿namespace InventoryApp.Api.Models
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+
+namespace InventoryApp.Api.Models
 {
+    [Index(nameof(BadgeBarcode), IsUnique = true)]
     public class Employee
     {
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string PinCode { get; set; }
 
-        // Indicates if the user needs to update their PIN on their next login
-        public bool MustChangePin { get; set; } = true;
+        [Required]
+        [MaxLength(100)]
+        public string Name { get; set; } = string.Empty;
 
+        [Required]
+        [MaxLength(50)]
+        public string BadgeBarcode { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(20)]
+        public string Role { get; set; } = "User";
     }
 }
