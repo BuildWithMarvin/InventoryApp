@@ -33,8 +33,7 @@ jobs:
       run: dotnet build ./InventoryApp.Api/InventoryApp.Api.csproj --no-restore --configuration Release
 
     - name: Run xUnit Tests
-      run: dotnet test ./InventoryApp.Api.Tests/InventoryApp.Api.Tests.csproj --no-build --configuration Release --verbosity normal
-
+      run: dotnet test ./InventoryApp.Tests/InventoryApp.Tests.csproj --no-build --configuration Release --verbosity normal
   # ---------------------------------------------
   # TEIL 2: CD (Continuous Deployment) - Azure Upload
   # Startet NUR auf dem 'main'-Branch UND wenn 'build-and-test' erfolgreich war!
