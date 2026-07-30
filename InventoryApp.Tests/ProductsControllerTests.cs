@@ -36,19 +36,19 @@ namespace InventoryApp.Tests
         }
 
         [Fact]
-        public async Task CreateProduct_SavesToDatabase_AndReturnsOk()
+        public async Task CreateProduct_SavesToDatabase_AndReturnsCreatedAtAction()
         {
             var context = GetDatabaseContext();
             var controller = new ProductsController(context);
 
-            
             var newProduct = new Product("12345678", "Test-articel");
 
             var result = await controller.CreateProduct(newProduct);
 
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+         
+            var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
 
-            var returnedProduct = Assert.IsType<Product>(okResult.Value);
+            var returnedProduct = Assert.IsType<Product>(createdResult.Value);
             Assert.Equal("12345678", returnedProduct.InternalBarcode);
 
             var productInDb = await context.Products.FirstOrDefaultAsync(p => p.InternalBarcode == "12345678");
@@ -61,14 +61,14 @@ namespace InventoryApp.Tests
             using var context = GetDatabaseContext();
             var controller = new ProductsController(context);
 
+    
             var originalProduct = new Product("12345678", "Old product")
             {
-                RowVersion = Guid.NewGuid().ToString()
+                RowVersion = new byte[] { 1, 0, 0, 0 }
             };
 
             context.Products.Add(originalProduct);
             await context.SaveChangesAsync();
-
             context.ChangeTracker.Clear();
 
             var updatedProduct = new Product("12345678", "New product (Updated!)")
@@ -76,12 +76,10 @@ namespace InventoryApp.Tests
                 RowVersion = originalProduct.RowVersion
             };
 
-           
             var result = await controller.UpdateProduct("12345678", updatedProduct);
 
             Assert.IsType<NoContentResult>(result);
 
-          
             var productInDb = await context.Products.FindAsync("12345678");
             Assert.NotNull(productInDb);
             Assert.Equal("New product (Updated!)", productInDb.Name);
@@ -106,7 +104,7 @@ namespace InventoryApp.Tests
             using var context = GetDatabaseContext();
             var controller = new ProductsController(context);
 
-            var mismatchedProduct = new Product("11112222", "Manipulated artikel");
+            var mismatchedProduct = new Product("11112222", "Manipulated articel");
 
             var result = await controller.UpdateProduct("12345678", mismatchedProduct);
 
@@ -119,27 +117,36 @@ namespace InventoryApp.Tests
             using var context = GetDatabaseContext();
             var controller = new ProductsController(context);
 
-            var originalProduct = new Product("999", "Lager-Artikel")
+           
+            var originalProduct = new Product("999", "Storage-article")
             {
-                RowVersion = Guid.NewGuid().ToString()
+                RowVersion = new byte[] { 1 } 
             };
             context.Products.Add(originalProduct);
             await context.SaveChangesAsync();
             context.ChangeTracker.Clear();
 
+           
             var productUserA = await context.Products.FindAsync("999");
-            productUserA.Name = "Lager-Artikel (Geändert von A)";
-            productUserA.RowVersion = Guid.NewGuid().ToString();
+            // Simulate User A updating the product first, changing the RowVersion.
+            productUserA.Name = "Changed-articel (Modified by A)";
+
+            // User B still has the old RowVersion and should trigger a concurrency conflict.
+            productUserA.RowVersion = new byte[] { 2 };
+
             await context.SaveChangesAsync();
+            // Detach tracked entities to simulate a new request with a fresh database state.
             context.ChangeTracker.Clear();
 
-            var productUserB = new Product("999", "Lager-Artikel (Geändert von B)")
+            
+            var productUserB = new Product("999", "Storage-article (Modified by B)")
             {
-                RowVersion = originalProduct.RowVersion
+                RowVersion = new byte[] { 1 } 
             };
 
             var result = await controller.UpdateProduct("999", productUserB);
 
+      
             Assert.IsType<ConflictObjectResult>(result);
         }
     }
