@@ -5,10 +5,8 @@ namespace InventoryApp.Api.Models
 {
     public class Product
     {
-       
         private Product() { }
 
-        
         public Product(string internalBarcode, string name)
         {
             if (string.IsNullOrWhiteSpace(internalBarcode))
@@ -27,13 +25,17 @@ namespace InventoryApp.Api.Models
 
         public string Name { get; set; }
         public string? Description { get; set; }
-        public int Quantity { get; set; }
 
-        [ConcurrencyCheck]
-        public string RowVersion { get; set; } = string.Empty;
+        public int TotalQuantity => Stocks?.Sum(s => s.Quantity) ?? 0;
+
+      
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = null!;
 
         [Precision(18, 2)]
         public decimal Price { get; set; }
         public int? LastUpdatedByEmployeeId { get; set; }
+
+        public ICollection<ProductStock> Stocks { get; set; } = new List<ProductStock>();
     }
 }
