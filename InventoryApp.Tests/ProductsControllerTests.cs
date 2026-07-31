@@ -41,7 +41,12 @@ namespace InventoryApp.Tests
             var context = GetDatabaseContext();
             var controller = new ProductsController(context);
 
-            var newProduct = new Product("12345678", "Test-articel");
+            var newProduct = new Product("12345678", "Test-articel")
+            {
+                RowVersion = new byte[] { 1, 0, 0, 0 }
+            };
+
+
 
             var result = await controller.CreateProduct(newProduct);
 
