@@ -2,6 +2,6 @@
 {
     public class LoginRequest
     {
-        public string PinCode { get; set; }
+        public string BadgeBarcode { get; set; } = string.Empty;
     }
 }

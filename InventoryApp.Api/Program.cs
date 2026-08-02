@@ -5,11 +5,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// Swagger UI, so that we can conveniently test the API in the browser later on
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register DB context. It automatically pulls the connection string from appsettings.json
+
 builder.Services.AddDbContext<InventoryDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -28,7 +28,7 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Standard middleware (HTTPS enforcement, auth pipeline, etc.)
+
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
