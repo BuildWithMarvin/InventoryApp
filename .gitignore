@@ -9,6 +9,9 @@ out/
 *.userosscache
 *.sln.doccache
 
+# Lokales Admin Frontend ignorieren
+inventory_admin/
+
 # Configuration & Secrets
 appsettings.json
 appsettings.Development.json
