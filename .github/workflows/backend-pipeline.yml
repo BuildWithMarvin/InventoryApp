@@ -17,25 +17,38 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    # --- Docker MS SQL Server für Integrationstests ---
+    services:
+      sql-server:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: "TestPassword123!"
+        ports:
+          - 1433:1433
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x' # Passt für .NET 8 (Ggf. an deine Version anpassen)
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
 
-    - name: Restore Dependencies
-      run: dotnet restore ./InventoryApp.Api/InventoryApp.Api.csproj
+      - name: Restore Dependencies
+        run: dotnet restore ./InventoryApp.Api/InventoryApp.Api.csproj
 
-    - name: Build API
-      run: dotnet build ./InventoryApp.Api/InventoryApp.Api.csproj --no-restore --configuration Release
+      - name: Build API
+        run: dotnet build ./InventoryApp.Api/InventoryApp.Api.csproj --no-restore --configuration Release
 
-    - name: Run xUnit Tests
-      run: dotnet test ./InventoryApp.Tests/InventoryApp.Tests.csproj --configuration Release --verbosity normal
+      - name: Run xUnit Tests
+        run: dotnet test ./InventoryApp.Tests/InventoryApp.Tests.csproj --configuration Release --verbosity normal
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=IntegrationTestDb;User Id=sa;Password=TestPassword123!;TrustServerCertificate=True;Encrypt=False;"
+
   # ---------------------------------------------
-  # TEIL 2: CD (Continuous Deployment) - Azure Upload
+  # TEIL 2: CD (Continuous Deployment) - Azure Upload & DB Migration
   # Startet NUR auf dem 'main'-Branch UND wenn 'build-and-test' erfolgreich war!
   # ---------------------------------------------
   deploy-to-azure:
@@ -44,20 +57,34 @@ jobs:
     if: github.ref == 'refs/heads/main' # Das stellt sicher, dass NUR vom main-Branch auf Azure deployt wird
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
 
-    - name: Publish API
-      run: dotnet publish ./InventoryApp.Api/InventoryApp.Api.csproj -c Release -o ./publish
+      - name: Restore Dependencies
+        run: dotnet restore ./InventoryApp.Api/InventoryApp.Api.csproj
 
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v3
-      with:
-        app-name: 'InventoryApi-MarvinFranke' # <-- Trage hier den genauen Namen deiner Azure Web App ein
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: ./publish
+      # --- EF Core Tool & Azure DB Migration ---
+      - name: Install dotnet-ef tool
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Apply EF Core Migrations to Azure DB
+        run: |
+          dotnet ef database update \
+            --project ./InventoryApp.Api/InventoryApp.Api.csproj \
+            --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+
+      # --- App Publishing & Deployment ---
+      - name: Publish API
+        run: dotnet publish ./InventoryApp.Api/InventoryApp.Api.csproj -c Release -o ./publish
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'InventoryApi-MarvinFranke'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish

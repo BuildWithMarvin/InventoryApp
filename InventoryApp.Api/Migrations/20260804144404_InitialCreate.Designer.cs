@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InventoryApp.Api.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20260731164512_AddProductStockAndStorageLocation")]
-    partial class AddProductStockAndStorageLocation
+    [Migration("20260804144404_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -112,11 +112,12 @@ namespace InventoryApp.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductInternalBarcode");
-
                     b.HasIndex("StorageLocationId");
 
-                    b.ToTable("ProductStock");
+                    b.HasIndex("ProductInternalBarcode", "StorageLocationId")
+                        .IsUnique();
+
+                    b.ToTable("ProductStocks");
                 });
 
             modelBuilder.Entity("InventoryApp.Api.Models.StorageLocation", b =>
@@ -129,7 +130,7 @@ namespace InventoryApp.Api.Migrations
 
                     b.Property<string>("Barcode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -144,7 +145,10 @@ namespace InventoryApp.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StorageLocation");
+                    b.HasIndex("Barcode")
+                        .IsUnique();
+
+                    b.ToTable("StorageLocations");
                 });
 
             modelBuilder.Entity("InventoryApp.Api.Models.ProductStock", b =>
