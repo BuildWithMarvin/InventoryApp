@@ -66,9 +66,7 @@ using System.Diagnostics;
                 return response.IsSuccessStatusCode;
             }
 
-            /// <summary>
-            /// Updates an existing product. Throws an InvalidOperationException on concurrency conflicts (HTTP 409).
-            /// </summary>
+           
             public async Task<bool> UpdateProductAsync(Product product)
             {
                 var json = JsonSerializer.Serialize(product);
@@ -92,27 +90,28 @@ using System.Diagnostics;
                 return true;
             }
 
-            public async Task<Employee> LoginAsync(string pin)
+        public async Task<Employee> LoginAsync(string badgeBarcode)
+        {
+            
+            var requestData = new { badgeBarcode = badgeBarcode?.Trim() };
+            var requestJson = JsonSerializer.Serialize(requestData);
+            var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync($"{_employeeApiUrl}/login", content);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
             {
-                var requestData = new { pinCode = pin?.Trim() };
-                var requestJson = JsonSerializer.Serialize(requestData);
-                var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync($"{_employeeApiUrl}/login", content);
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return JsonSerializer.Deserialize<Employee>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                }
-                else
-                {
-                    Debug.WriteLine($"API Error {response.StatusCode}: {responseContent}");
-                    return null;
-                }
+                return JsonSerializer.Deserialize<Employee>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
+            else
+            {
+                Debug.WriteLine($"API Error {response.StatusCode}: {responseContent}");
+                return null;
+            }
+        }
 
-            public async Task<bool> ChangePinAsync(int employeeId, string newPin)
+        public async Task<bool> ChangePinAsync(int employeeId, string newPin)
             {
                 var requestData = new
                 {

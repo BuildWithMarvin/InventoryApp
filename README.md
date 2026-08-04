@@ -8,7 +8,7 @@ Proof-of-concept inventory management app built with .NET MAUI and ASP.NET Core.
 * **Camera Barcode Scanning:** Uses the device camera to read barcodes and fetches the corresponding product details directly from the Azure SQL database.
 * **Dynamic Product Creation:** If an employee scans a barcode that isn't in the system yet, the app prompts them to create and categorize the new item right there on the shop floor.
 * **Stock Management:** Simple "+ / -" actions for checking items in and out, including basic validation so stock levels don't drop below zero.
-* **Employee Access:** A basic PIN based login system, including workflows for mandatory PIN changes (e.g., after an admin reset).
+* **Employee Access:** Fast and secure barcode-based login system using employee badges (BadgeBarcode).
 * **Local Search:** In-memory filtering allows for quick searches by name or barcode without constantly hitting the API.
 
 ## Architecture

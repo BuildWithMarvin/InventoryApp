@@ -14,8 +14,6 @@ namespace InventoryApp.Maui.Models
         public int Quantity { get; set; }
         public decimal Price { get; set; }
         public string Barcode { get; set; }
-
-        // Unser neues Tracking-Feld für das Backend!
         public int? LastUpdatedByEmployeeId { get; set; }
     }
 }

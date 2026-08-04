@@ -1,7 +1,7 @@
 ﻿using InventoryApp.Api.Data;
-using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using InventoryApp.Api.Models;
 
 namespace InventoryApp.Api.Controllers
 {
@@ -13,17 +13,15 @@ namespace InventoryApp.Api.Controllers
 
         public ProductsController(InventoryDbContext context)
         {
-            _context = context; 
+            _context = context;
         }
 
-        /// <summary>
-        /// Retrieves a specific product by its barcode.
-        /// </summary>
-        [HttpGet("barcode/{barcode}")]
-        public async Task<ActionResult<Product>> GetProductByBarcode(string barcode)
+        [HttpGet("{internalBarcode}")]
+        public async Task<ActionResult<Product>> GetProductByBarcode(string internalBarcode)
         {
-           
-            var product = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == barcode);
+            var product = await _context.Products
+                .Include(p => p.Stocks) // Includes the inventory in the storage spaces
+                .FirstOrDefaultAsync(p => p.InternalBarcode == internalBarcode);
 
             if (product == null)
             {
@@ -33,39 +31,39 @@ namespace InventoryApp.Api.Controllers
             return product;
         }
 
-        /// <summary>
-        /// Retrieves all products from the inventory.
-        /// </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {
             // Note: For future scaling (e.g., > 50,000 items), consider implementing pagination (Skip/Take).
-            return await _context.Products.ToListAsync();
+            return await _context.Products
+                .Include(p => p.Stocks)
+                .ToListAsync();
         }
 
-        /// <summary>
-        /// Creates a new product in the database.
-        /// </summary>
         [HttpPost]
         public async Task<ActionResult<Product>> CreateProduct(Product product)
         {
-            product.RowVersion = Guid.NewGuid().ToString();
+            if (ProductExists(product.InternalBarcode))
+            {
+                return Conflict("Barcode already assigned.");
+            }
+
+            // FIXED: Removal of the assignment of ‘RowVersion’. SQL Server automatically fills ‘byte[]’.// Includes the inventory in the memory areas
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
-            return Ok(product);
+
+            return CreatedAtAction(nameof(GetProductByBarcode), new { internalBarcode = product.InternalBarcode }, product);
         }
 
-        
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, Product product)
+        [HttpPut("{internalBarcode}")]
+        public async Task<IActionResult> UpdateProduct(string internalBarcode, Product product)
         {
-            if (id != product.Id)
+            if (internalBarcode != product.InternalBarcode)
             {
-                return BadRequest("Product ID mismatch.");
+                return BadRequest("Product Barcode mismatch.");
             }
-           
+
             _context.Entry(product).State = EntityState.Modified;
-            product.RowVersion = Guid.NewGuid().ToString();
 
             try
             {
@@ -73,14 +71,12 @@ namespace InventoryApp.Api.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ProductExists(id))
+                if (!ProductExists(internalBarcode))
                 {
-                    return NotFound($"Product with ID {id} not found.");
+                    return NotFound($"Product with Barcode {internalBarcode} not found.");
                 }
                 else
                 {
-                    // Collision! Another user updated the product in the meantime.
-                    // We return a 409 Conflict status code so the app knows exactly what happened.
                     return Conflict("Conflict: Another user is currently editing this article. Please refresh the page.");
                 }
             }
@@ -88,9 +84,9 @@ namespace InventoryApp.Api.Controllers
             return NoContent();
         }
 
-        private bool ProductExists(int id)
+        private bool ProductExists(string internalBarcode)
         {
-            return _context.Products.Any(e => e.Id == id);
+            return _context.Products.Any(e => e.InternalBarcode == internalBarcode);
         }
     }
 }
