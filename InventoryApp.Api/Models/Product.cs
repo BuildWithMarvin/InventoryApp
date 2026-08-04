@@ -1,5 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InventoryApp.Api.Models
 {
@@ -8,7 +9,8 @@ namespace InventoryApp.Api.Models
 
         private Product() { }
 
-        public Product(string internalBarcode, string name, int createdByEmployeeId)
+  
+      public Product(string internalBarcode, string name, int createdByEmployeeId, string? supplierBarcode = null)
         {
             if (string.IsNullOrWhiteSpace(internalBarcode))
                 throw new ArgumentException("A barcode is required.", nameof(internalBarcode));
@@ -16,11 +18,10 @@ namespace InventoryApp.Api.Models
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("A name is required.", nameof(name));
 
-            InternalBarcode = internalBarcode;
+            InternalBarcode = internalBarcode?.Trim();
             Name = name;
             LastUpdatedByEmployeeId = createdByEmployeeId;
         }
-
         [Key]
         [MaxLength(50)]
         public string InternalBarcode { get; private set; }
@@ -37,16 +38,22 @@ namespace InventoryApp.Api.Models
 
         public int? LastUpdatedByEmployeeId { get; private set; }
 
+        [ForeignKey(nameof(LastUpdatedByEmployeeId))]
+        public Employee? LastUpdatedBy { get; private set; }
+
         public int TotalQuantity => Stocks?.Sum(s => s.Quantity) ?? 0;
+
+     
 
         [Timestamp]
         public byte[] RowVersion { get; private set; } = null!;
 
-        public ICollection<ProductStock> Stocks { get; private set; } = new List<ProductStock>();
+
+        public ICollection<ProductStock> Stocks { get; } = new List<ProductStock>();
 
         public void UpdateSupplierBarcode(string supplierBarcode, int employeeId)
         {
-            SupplierBarcode = supplierBarcode;
+            SupplierBarcode = string.IsNullOrWhiteSpace(supplierBarcode) ? null : supplierBarcode.Trim();
             LastUpdatedByEmployeeId = employeeId;
         }
 
