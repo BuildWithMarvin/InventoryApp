@@ -21,6 +21,7 @@ namespace InventoryApp.Api.Models
             InternalBarcode = internalBarcode?.Trim();
             Name = name;
             LastUpdatedByEmployeeId = createdByEmployeeId;
+            SupplierBarcode = supplierBarcode;
         }
         [Key]
         [MaxLength(50)]
