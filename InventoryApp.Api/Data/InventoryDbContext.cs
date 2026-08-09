@@ -1,47 +1,61 @@
 ﻿using InventoryApp.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-public class InventoryDbContext : DbContext
+namespace InventoryApp.Api.Data
 {
-    public InventoryDbContext(DbContextOptions<InventoryDbContext> dbSetup) : base(dbSetup) { }
 
-    public DbSet<Product> Products => Set<Product>();
-    public DbSet<Employee> Employees => Set<Employee>();
-    public DbSet<StorageLocation> StorageLocations => Set<StorageLocation>();
-    public DbSet<ProductStock> ProductStocks => Set<ProductStock>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public class InventoryDbContext : DbContext
     {
-        base.OnModelCreating(modelBuilder);
+        public InventoryDbContext(DbContextOptions<InventoryDbContext> dbSetup) : base(dbSetup) { }
+
+        public DbSet<Product> Products => Set<Product>();
+        public DbSet<Employee> Employees => Set<Employee>();
+        public DbSet<StorageLocation> StorageLocations => Set<StorageLocation>();
+        public DbSet<ProductStock> ProductStocks => Set<ProductStock>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
 
 
-        modelBuilder.Entity<ProductStock>()
-            .HasIndex(ps => new { ps.ProductInternalBarcode, ps.StorageLocationId })
-            .IsUnique();
+            modelBuilder.Entity<ProductStock>()
+                .HasIndex(ps => new { ps.ProductInternalBarcode, ps.StorageLocationId })
+                .IsUnique();
 
-        modelBuilder.Entity<ProductStock>()
-            .HasOne(ps => ps.Product)
-            .WithMany(p => p.Stocks)
-            .HasForeignKey(ps => ps.ProductInternalBarcode);
-
-
-        modelBuilder.Entity<StorageLocation>()
-            .HasIndex(sl => sl.Barcode)
-            .IsUnique();
+            modelBuilder.Entity<ProductStock>()
+                .HasOne(ps => ps.Product)
+                .WithMany(p => p.Stocks)
+                .HasForeignKey(ps => ps.ProductInternalBarcode);
 
 
+            modelBuilder.Entity<StorageLocation>()
+                .HasIndex(sl => sl.Barcode)
+                .IsUnique();
 
 
-        modelBuilder.Entity<Product>()
-            .HasOne(p => p.LastUpdatedBy)
-            .WithMany()
-            .HasForeignKey(p => p.LastUpdatedByEmployeeId)
-            .OnDelete(DeleteBehavior.SetNull);
 
-        modelBuilder.Entity<ProductStock>()
-            .HasOne(ps => ps.LastUpdatedBy)
-            .WithMany()
-            .HasForeignKey(ps => ps.LastUpdatedByEmployeeId)
-            .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.LastUpdatedBy)
+                .WithMany()
+                .HasForeignKey(p => p.LastUpdatedByEmployeeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<ProductStock>()
+                .HasOne(ps => ps.LastUpdatedBy)
+                .WithMany()
+                .HasForeignKey(ps => ps.LastUpdatedByEmployeeId)
+                .OnDelete(DeleteBehavior.SetNull);
+        }
     }
+
+
+
+
+
+
+
+
+
+
 }

@@ -11,14 +11,40 @@ on:
       - "main"
 
 jobs:
-  # ---------------------------------------------
-  # TEIL 1: CI (Continuous Integration) - Bauen & Testen
-  # Runs on: feature/* Branches & main
-  # ---------------------------------------------
-  build-and-test:
+
+  # =============================================
+  # CI - UNIT TESTS
+  # =============================================
+
+  unit-tests:
     runs-on: ubuntu-latest
 
-    # --- Docker MS SQL Server für Integrationstests ---
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore ./InventoryApp.Api/InventoryApp.Api.csproj
+
+      - name: Build API
+        run: dotnet build ./InventoryApp.Api/InventoryApp.Api.csproj --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        run: dotnet test ./InventoryApp.Tests/InventoryApp.Tests.csproj --configuration Release --verbosity normal --filter "Category=Unit"
+
+
+  # =============================================
+  # CI - INTEGRATION TESTS
+  # =============================================
+
+  integration-tests:
+    runs-on: ubuntu-latest
+
     services:
       sql-server:
         image: mcr.microsoft.com/mssql/server:2022-latest
@@ -43,19 +69,24 @@ jobs:
       - name: Build API
         run: dotnet build ./InventoryApp.Api/InventoryApp.Api.csproj --no-restore --configuration Release
 
-      - name: Run xUnit Tests
-        run: dotnet test ./InventoryApp.Tests/InventoryApp.Tests.csproj --configuration Release --verbosity normal
+      - name: Run Integration Tests
+        run: dotnet test ./InventoryApp.Tests/InventoryApp.Tests.csproj --configuration Release --verbosity normal --filter "Category=Integration"
         env:
           ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=IntegrationTestDb;User Id=sa;Password=TestPassword123!;TrustServerCertificate=True;Encrypt=False;"
 
-  # ---------------------------------------------
-  # TEIL 2: CD (Continuous Deployment) - Azure Upload & DB Migration
-  # Startet NUR auf dem 'main'-Branch UND wenn 'build-and-test' erfolgreich war!
-  # ---------------------------------------------
+
+  # =============================================
+  # CD - DEPLOY TO AZURE
+  # =============================================
+
   deploy-to-azure:
-    needs: build-and-test
+    needs:
+      - unit-tests
+      - integration-tests
+
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' # Das stellt sicher, dass NUR vom main-Branch auf Azure deployt wird
+
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout Code
@@ -70,6 +101,7 @@ jobs:
         run: dotnet restore ./InventoryApp.Api/InventoryApp.Api.csproj
 
       # --- EF Core Tool & Azure DB Migration ---
+
       - name: Install dotnet-ef tool
         run: dotnet tool install --global dotnet-ef
 
@@ -80,6 +112,7 @@ jobs:
             --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
 
       # --- App Publishing & Deployment ---
+
       - name: Publish API
         run: dotnet publish ./InventoryApp.Api/InventoryApp.Api.csproj -c Release -o ./publish
 
