@@ -1,12 +1,11 @@
 ﻿using InventoryApp.Api.Controllers;
-using InventoryApp.Api.Data;
 using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 [Trait("Category", "Integration")]
+[Collection("Integration Tests")]
 public class EmployeesControllerTests
-    : IClassFixture<DatabaseFixture>
 {
     private readonly DatabaseFixture _databaseFixture;
 
@@ -17,7 +16,7 @@ public class EmployeesControllerTests
 
     [Fact]
     public async Task Login_ReturnsOk_WhenBarcodeIsValid()
-    {
+    {   
         await using var context =
             _databaseFixture.CreateContext();
 

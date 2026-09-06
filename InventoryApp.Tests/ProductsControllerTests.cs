@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 
     [Trait("Category", "Integration")]
+    [Collection("Integration Tests")]
     public class ProductsControllerTests
-        : IClassFixture<DatabaseFixture>
     {
         private readonly DatabaseFixture _databaseFixture;
 
