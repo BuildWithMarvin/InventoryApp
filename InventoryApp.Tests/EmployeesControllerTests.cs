@@ -4,7 +4,7 @@ using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-
+[Trait("Category", "Integration")]
 public class EmployeesControllerTests
     : IClassFixture<DatabaseFixture>
 {

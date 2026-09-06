@@ -1,47 +1,65 @@
+using InventoryApp.Api.Controllers;
+using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Threading.Tasks;
-using Xunit;
-using InventoryApp.Api.Controllers;
-using InventoryApp.Api.Data;
-using InventoryApp.Api.Models;
 
-namespace InventoryApp.Tests
-{
+
     [Trait("Category", "Integration")]
     public class ProductsControllerTests
+        : IClassFixture<DatabaseFixture>
     {
-        private InventoryDbContext GetDatabaseContext()
+        private readonly DatabaseFixture _databaseFixture;
+
+        public ProductsControllerTests(DatabaseFixture databaseFixture)
         {
-            var connectionString =
-        Environment.GetEnvironmentVariable(
-            "ConnectionStrings__DefaultConnection");
+            _databaseFixture = databaseFixture;
+        }
 
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                throw new InvalidOperationException(
-                    "ConnectionStrings__DefaultConnection is not configured.");
-            }
+        [Fact]
+        public async Task GetProductByBarcode_ReturnsOk_WhenProductExists()
+        {
+            await using var context =
+                _databaseFixture.CreateContext();
 
-            var options = new DbContextOptionsBuilder<InventoryDbContext>()
-                .UseSqlServer(connectionString)
-                .Options;
+            var controller = new ProductsController(context);
 
-            var context = new InventoryDbContext(options);
+            var product = new Product(
+                "10000001",
+                "Test product",
+                1
+            );
 
-            context.Database.Migrate();
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
 
-            return context;
+            var result =
+                await controller.GetProductByBarcode("10000001");
+
+            var okResult =
+                Assert.IsType<OkObjectResult>(result.Result);
+
+            var returnedProduct =
+                Assert.IsType<Product>(okResult.Value);
+
+            Assert.Equal(
+                "10000001",
+                returnedProduct.InternalBarcode);
+
+            Assert.Equal(
+                "Test product",
+                returnedProduct.Name);
         }
 
         [Fact]
         public async Task GetProductByBarcode_ReturnsNotFound_WhenBarcodeDoesNotExist()
         {
-            using var context = GetDatabaseContext();
+            await using var context =
+                _databaseFixture.CreateContext();
+
             var controller = new ProductsController(context);
 
-            var result = await controller.GetProductByBarcode("99999999");
+            var result =
+                await controller.GetProductByBarcode("10000002");
 
             Assert.IsType<NotFoundResult>(result.Result);
         }
@@ -49,44 +67,60 @@ namespace InventoryApp.Tests
         [Fact]
         public async Task CreateProduct_SavesToDatabase_AndReturnsCreatedAtAction()
         {
-            using var context = GetDatabaseContext();
+            await using var context =
+                _databaseFixture.CreateContext();
+
             var controller = new ProductsController(context);
 
             var newProduct = new Product(
-                "12345678",
-                "Test-articel",
+                "10000003",
+                "Test product",
                 1
             );
 
-            var result = await controller.CreateProduct(newProduct);
+            var result =
+                await controller.CreateProduct(newProduct);
 
             var createdResult =
                 Assert.IsType<CreatedAtActionResult>(result.Result);
+
+            Assert.Equal(
+                nameof(ProductsController.GetProductByBarcode),
+                createdResult.ActionName);
 
             var returnedProduct =
                 Assert.IsType<Product>(createdResult.Value);
 
             Assert.Equal(
-                "12345678",
-                returnedProduct.InternalBarcode
-            );
+                "10000003",
+                returnedProduct.InternalBarcode);
 
-            var productInDb = await context.Products
-                .FirstOrDefaultAsync(
-                    p => p.InternalBarcode == "12345678"
-                );
+            Assert.Equal(
+                "Test product",
+                returnedProduct.Name);
+
+            var productInDb =
+                await context.Products
+                    .FirstOrDefaultAsync(
+                        p => p.InternalBarcode == "10000003");
 
             Assert.NotNull(productInDb);
+
+            Assert.Equal(
+                "Test product",
+                productInDb.Name);
         }
 
         [Fact]
         public async Task UpdateProduct_ChangesData_AndReturnsNoContent()
         {
-            using var context = GetDatabaseContext();
+            await using var context =
+                _databaseFixture.CreateContext();
+
             var controller = new ProductsController(context);
 
             var originalProduct = new Product(
-                "12345678",
+                "10000004",
                 "Old product",
                 1
             );
@@ -97,44 +131,47 @@ namespace InventoryApp.Tests
             context.ChangeTracker.Clear();
 
             var updatedProduct = new Product(
-                "12345678",
-                "New product (Updated!)",
+                "10000004",
+                "New product",
                 1
             );
 
-            var result = await controller.UpdateProduct(
-                "12345678",
-                updatedProduct
-            );
+            var result =
+                await controller.UpdateProduct(
+                    "10000004",
+                    updatedProduct);
 
             Assert.IsType<NoContentResult>(result);
 
-            var productInDb = await context.Products
-                .FindAsync("12345678");
+            var productInDb =
+                await context.Products
+                    .FindAsync("10000004");
 
             Assert.NotNull(productInDb);
+
             Assert.Equal(
-                "New product (Updated!)",
-                productInDb.Name
-            );
+                "New product",
+                productInDb.Name);
         }
 
         [Fact]
         public async Task UpdateProduct_ReturnsNotFound_WhenProductDoesNotExist()
         {
-            using var context = GetDatabaseContext();
+            await using var context =
+                _databaseFixture.CreateContext();
+
             var controller = new ProductsController(context);
 
             var nonExistentProduct = new Product(
-                "00000000",
-                "Phantom-product",
+                "10000005",
+                "Phantom product",
                 1
             );
 
-            var result = await controller.UpdateProduct(
-                "00000000",
-                nonExistentProduct
-            );
+            var result =
+                await controller.UpdateProduct(
+                    "10000005",
+                    nonExistentProduct);
 
             Assert.IsType<NotFoundObjectResult>(result);
         }
@@ -142,21 +179,22 @@ namespace InventoryApp.Tests
         [Fact]
         public async Task UpdateProduct_ReturnsBadRequest_WhenIdsDoNotMatch()
         {
-            using var context = GetDatabaseContext();
+            await using var context =
+                _databaseFixture.CreateContext();
+
             var controller = new ProductsController(context);
 
             var mismatchedProduct = new Product(
-                "11112222",
-                "Manipulated article",
+                "10000006",
+                "Manipulated product",
                 1
             );
 
-            var result = await controller.UpdateProduct(
-                "12345678",
-                mismatchedProduct
-            );
+            var result =
+                await controller.UpdateProduct(
+                    "10000004",
+                    mismatchedProduct);
 
             Assert.IsType<BadRequestObjectResult>(result);
         }
     }
-}
