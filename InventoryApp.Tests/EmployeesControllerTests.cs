@@ -1,102 +1,119 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Threading.Tasks;
-using Xunit;
-using InventoryApp.Api.Controllers;
+﻿using InventoryApp.Api.Controllers;
 using InventoryApp.Api.Data;
 using InventoryApp.Api.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace InventoryApp.Tests
+
+public class EmployeesControllerTests
+    : IClassFixture<DatabaseFixture>
 {
-    public class EmployeesControllerTests
+    private readonly DatabaseFixture _databaseFixture;
+
+    public EmployeesControllerTests(DatabaseFixture databaseFixture)
     {
-        private InventoryDbContext GetDatabaseContext()
+        _databaseFixture = databaseFixture;
+    }
+
+    [Fact]
+    public async Task Login_ReturnsOk_WhenBarcodeIsValid()
+    {
+        await using var context =
+            _databaseFixture.CreateContext();
+
+        var controller = new EmployeesController(context);
+
+        var employee = new Employee
         {
-            var options = new DbContextOptionsBuilder<InventoryDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-                .Options;
+            Id = 1,
+            Name = "Bob",
+            BadgeBarcode = "EMP-12345",
+            Role = "User"
+        };
 
-            var context = new InventoryDbContext(options);
-            context.Database.EnsureCreated();
-            return context;
-        }
+        context.Employees.Add(employee);
+        await context.SaveChangesAsync();
 
-        [Fact]
-        public async Task Login_ReturnsOk_WhenBarcodeIsValid()
+        var loginRequest = new LoginRequest
         {
+            BadgeBarcode = "EMP-12345"
+        };
 
-            using var context = GetDatabaseContext();
-            var controller = new EmployeesController(context);
+        var result =
+            await controller.Login(loginRequest);
 
-            var employee = new Employee
-            {
-                Id = 1,
-                Name = "Bob",
-                BadgeBarcode = "EMP-12345",
-                Role = "User"
-            };
+        var okResult =
+            Assert.IsType<OkObjectResult>(result);
 
-            context.Employees.Add(employee);
-            await context.SaveChangesAsync();
+        Assert.NotNull(okResult.Value);
+    }
 
-            var loginRequest = new LoginRequest
-            {
-                BadgeBarcode = "EMP-12345"
-            };
+    [Fact]
+    public async Task Login_ReturnsUnauthorized_WhenBarcodeIsInvalid()
+    {
+        await using var context =
+            _databaseFixture.CreateContext();
 
+        var controller = new EmployeesController(context);
 
-            var result = await controller.Login(loginRequest);
-
-
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            Assert.NotNull(okResult.Value);
-        }
-
-
-        public async Task Login_ReturnsUnauthorized_WhenBarcodeIsInvalid()
+        var loginRequest = new LoginRequest
         {
+            BadgeBarcode = "WRONG-BARCODE"
+        };
 
-            using var context = GetDatabaseContext();
-            var controller = new EmployeesController(context);
+        var result =
+            await controller.Login(loginRequest);
 
-            var loginRequest = new LoginRequest
-            {
-                BadgeBarcode = "WRONG-BARCODE"
-            };
+        Assert.IsType<UnauthorizedObjectResult>(result);
+    }
 
-            var result = await controller.Login(loginRequest);
+    [Fact]
+    public async Task CreateEmployee_SavesToDatabase_AndReturnsOk()
+    {
+        await using var context =
+            _databaseFixture.CreateContext();
 
+        var controller = new EmployeesController(context);
 
-            Assert.IsType<UnauthorizedResult>(result);
-        }
-
-        [Fact]
-        public async Task CreateEmployee_SavesToDatabase_AndReturnsOk()
+        var newEmployee = new Employee
         {
+            Id = 2,
+            Name = "New admin",
+            BadgeBarcode = "ADMIN-999",
+            Role = "Admin"
+        };
 
-            using var context = GetDatabaseContext();
-            var controller = new EmployeesController(context);
+        var result =
+            await controller.CreateEmployee(newEmployee);
 
-            var newEmployee = new Employee
-            {
-                Id = 2,
-                Name = "New admin",
-                BadgeBarcode = "ADMIN-999",
-                Role = "Admin"
-            };
+        var okResult =
+            Assert.IsType<OkObjectResult>(result);
+
+        var returnedEmployee =
+            Assert.IsType<Employee>(okResult.Value);
+
+        Assert.Equal(
+            "ADMIN-999",
+            returnedEmployee.BadgeBarcode);
+
+        Assert.Equal(
+            "Admin",
+            returnedEmployee.Role);
 
 
-            var result = await controller.CreateEmployee(newEmployee);
 
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            var returnedEmployee = Assert.IsType<Employee>(okResult.Value);
+        var employeeInDb =
+            await context.Employees
+                .FirstOrDefaultAsync(
+                    e => e.BadgeBarcode == "ADMIN-999");
 
-            Assert.Equal("ADMIN-999", returnedEmployee.BadgeBarcode);
-            Assert.Equal("Admin", returnedEmployee.Role);
 
-            var employeeInDb = await context.Employees.FirstOrDefaultAsync(e => e.BadgeBarcode == "ADMIN-999");
-            Assert.NotNull(employeeInDb);
-        }
+        Assert.NotNull(employeeInDb);
     }
 }
+
+
+
+
+
+
