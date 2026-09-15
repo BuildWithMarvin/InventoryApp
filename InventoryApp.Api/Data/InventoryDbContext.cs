@@ -48,14 +48,4 @@ namespace InventoryApp.Api.Data
                 .OnDelete(DeleteBehavior.SetNull);
         }
     }
-
-
-
-
-
-
-
-
-
-
 }

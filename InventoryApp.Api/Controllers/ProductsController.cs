@@ -20,7 +20,7 @@ namespace InventoryApp.Api.Controllers
         public async Task<ActionResult<Product>> GetProductByBarcode(string internalBarcode)
         {
             var product = await _context.Products
-                .Include(p => p.Stocks) // Includes the inventory in the storage spaces
+                .Include(p => p.Stocks) 
                 .FirstOrDefaultAsync(p => p.InternalBarcode == internalBarcode);
 
             if (product == null)

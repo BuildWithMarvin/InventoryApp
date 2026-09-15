@@ -1,0 +1,110 @@
+name: Backend CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - "main"
+      - "ft/*"
+      - "refactor/*"
+
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+
+  # ---------------------------------------------
+  # CI - Bauen & Testen
+  # ---------------------------------------------
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      sql-server:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+  
+        ports:
+          - 1433:1433 
+
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Wait for SQL Server
+        run: |
+          echo "Waiting for SQL Server..."
+
+          for i in {1..30}; do
+            if (echo > /dev/tcp/localhost/1433) >/dev/null 2>&1; then
+              echo "SQL Server is accepting connections."
+              break
+            fi
+
+            echo "SQL Server not ready yet..."
+            sleep 2
+          done
+
+      - name: Restore Dependencies
+        run: dotnet restore ./InventoryApp.Api/InventoryApp.Api.csproj
+
+      - name: Build API
+        run: dotnet build ./InventoryApp.Api/InventoryApp.Api.csproj --no-restore --configuration Release
+
+      - name: Run xUnit Integration Tests
+        run: dotnet test ./InventoryApp.Tests/InventoryApp.Tests.csproj --configuration Release --verbosity normal
+
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=IntegrationTestDb;User Id=sa;Password=TestPassword123!;TrustServerCertificate=True;Encrypt=False;"
+
+
+  # ---------------------------------------------
+  # CD - Azure Deployment
+  # ---------------------------------------------
+  deploy-to-azure:
+    needs: build-and-test
+
+    runs-on: ubuntu-latest
+
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore ./InventoryApp.Api/InventoryApp.Api.csproj
+
+      - name: Install dotnet-ef tool
+        run: dotnet tool install --global dotnet-ef --version 10.0.11
+
+      - name: Apply EF Core Migrations to Azure DB
+        run: |
+          dotnet ef database update \
+            --project ./InventoryApp.Api/InventoryApp.Api.csproj \
+            --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+
+      - name: Publish API
+        run: dotnet publish ./InventoryApp.Api/InventoryApp.Api.csproj -c Release -o ./publish
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'InventoryApi-MarvinFranke'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
