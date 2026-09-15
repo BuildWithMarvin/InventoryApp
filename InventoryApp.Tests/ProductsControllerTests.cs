@@ -50,7 +50,7 @@ public class ProductsControllerTests
             await controller.GetProductByBarcode("10000001");
 
         var okResult =
-            Assert.IsType<OkObjectResult>(result.Result);
+            Assert.IsType<OkObjectResult>(result.Value);
 
         var returnedProduct =
             Assert.IsType<Product>(okResult.Value);
