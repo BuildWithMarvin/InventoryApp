@@ -25,7 +25,6 @@ public class ProductsControllerTests
 
         var employee = new Employee
         {
-            
             Name = "Max-Mustermann",
             BadgeBarcode = "EMP-12346",
             Role = "user"
@@ -82,6 +81,17 @@ public class ProductsControllerTests
     {
         await using var context =
             _databaseFixture.CreateContext();
+
+            var employee = new Employee
+        {
+            Name = "Max-Mustermann",
+            BadgeBarcode = "EMP-12346",
+            Role = "user"
+        };
+
+        context.Employees.Add(employee);
+
+        await context.SaveChangesAsync();
 
         var controller = new ProductsController(context);
 
