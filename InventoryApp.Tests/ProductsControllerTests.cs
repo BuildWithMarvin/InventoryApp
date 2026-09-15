@@ -23,6 +23,16 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
+        var employee = new Employee();
+        employee.Id = 1;
+        employee.Name = "Max-Mustermann";
+        employee.BadgeBarcode = "EMP-12345";
+        employee.Role = "user";
+
+        context.Employees.Add(employee);
+
+        await context.SaveChangesAsync();
+
         var controller = new ProductsController(context);
 
         var product = new Product(
