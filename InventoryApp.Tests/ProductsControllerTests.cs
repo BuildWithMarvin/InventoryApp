@@ -25,9 +25,9 @@ public class ProductsControllerTests
 
         var employee = new Employee
         {
-            Id = 1,
+            
             Name = "Max-Mustermann",
-            BadgeBarcode = "EMP-12345",
+            BadgeBarcode = "EMP-12346",
             Role = "user"
         };
 
