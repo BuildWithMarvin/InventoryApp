@@ -148,12 +148,26 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
+             var employee = new Employee
+        {
+            Name = "John-Doe",
+            BadgeBarcode = "EMP-12348",
+            Role = "user"
+        };
+
+        context.Employees.Add(employee);
+
+        await context.SaveChangesAsync();
+
+          var createdEmployee = await context.Employees
+                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+
         var controller = new ProductsController(context);
 
         var originalProduct = new Product(
             "10000004",
             "Old product",
-            1
+            createdEmployee.Id
         );
 
         context.Products.Add(originalProduct);
@@ -161,10 +175,24 @@ public class ProductsControllerTests
 
         context.ChangeTracker.Clear();
 
+          var updatingEmployee = new Employee
+        {
+            Name = "Bender",
+            BadgeBarcode = "EMP-12349",
+            Role = "user"
+        };
+
+        context.Employees.Add(employee);
+
+        await context.SaveChangesAsync();
+
+          var createdUpdatingEmployee = await context.Employees
+                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+
         var updatedProduct = new Product(
             "10000004",
             "New product",
-            1
+            createdUpdatingEmployee.Id
         );
 
         var result =
@@ -191,12 +219,26 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
+                  var employee = new Employee
+        {
+            Name = "Jonny-Begood",
+            BadgeBarcode = "EMP-12341",
+            Role = "user"
+        };
+
+        context.Employees.Add(employee);
+
+        await context.SaveChangesAsync();
+
+          var createdEmployee = await context.Employees
+                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+
         var controller = new ProductsController(context);
 
         var nonExistentProduct = new Product(
             "10000005",
             "Phantom product",
-            1
+            createdEmployee.Id
         );
 
         var result =
@@ -213,12 +255,26 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
+                         var employee = new Employee
+        {
+            Name = "Klaus-Kleber",
+            BadgeBarcode = "EMP-12341",
+            Role = "user"
+        };
+
+        context.Employees.Add(employee);
+
+        await context.SaveChangesAsync();
+
+          var createdEmployee = await context.Employees
+                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+
         var controller = new ProductsController(context);
 
         var mismatchedProduct = new Product(
             "10000006",
             "Manipulated product",
-            1
+            createdEmployee.Id
         );
 
         var result =
