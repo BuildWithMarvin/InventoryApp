@@ -187,7 +187,7 @@ public class ProductsControllerTests
         await context.SaveChangesAsync();
 
           var createdUpdatingEmployee = await context.Employees
-                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+                .SingleAsync(e => e.BadgeBarcode == updatingEmployee.BadgeBarcode);
 
         var updatedProduct = new Product(
             "10000004",
