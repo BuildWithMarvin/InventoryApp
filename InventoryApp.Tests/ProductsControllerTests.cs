@@ -26,7 +26,7 @@ public class ProductsControllerTests
         var employee = new Employee
         {
             Name = "Max-Mustermann",
-            BadgeBarcode = "EMP-12346",
+            BadgeBarcode = "EMP-12347",
             Role = "user"
         };
 
@@ -34,13 +34,18 @@ public class ProductsControllerTests
 
         await context.SaveChangesAsync();
 
+        var createdEmployee = await context.Employees
+                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+
+        
         var controller = new ProductsController(context);
 
         var product = new Product(
             "10000001",
             "Test product",
-            1
-        );
+            createdEmployee.Id
+
+    );
 
         context.Products.Add(product);
         await context.SaveChangesAsync();
@@ -48,7 +53,7 @@ public class ProductsControllerTests
         var result =
             await controller.GetProductByBarcode("10000001");
 
-       
+
 
         var returnedProduct =
             Assert.IsType<Product>(result.Value);
@@ -82,9 +87,9 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
-            var employee = new Employee
+        var employee = new Employee
         {
-            Name = "Max-Mustermann",
+            Name = "Max-Mueller",
             BadgeBarcode = "EMP-12346",
             Role = "user"
         };
@@ -93,12 +98,15 @@ public class ProductsControllerTests
 
         await context.SaveChangesAsync();
 
+          var createdEmployee = await context.Employees
+                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+
         var controller = new ProductsController(context);
 
         var newProduct = new Product(
             "10000003",
             "Test product",
-            1
+            createdEmployee.Id
         );
 
         var result =
