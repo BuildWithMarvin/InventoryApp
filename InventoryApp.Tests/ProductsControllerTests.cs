@@ -258,7 +258,7 @@ public class ProductsControllerTests
                          var employee = new Employee
         {
             Name = "Klaus-Kleber",
-            BadgeBarcode = "EMP-12341",
+            BadgeBarcode = "EMP-12350",
             Role = "user"
         };
 
