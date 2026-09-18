@@ -182,7 +182,7 @@ public class ProductsControllerTests
             Role = "user"
         };
 
-        context.Employees.Add(employee);
+        context.Employees.Add(updatingEmployee);
 
         await context.SaveChangesAsync();
 
