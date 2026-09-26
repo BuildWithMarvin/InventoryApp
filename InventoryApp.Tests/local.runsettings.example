@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copy to local.runsettings (gitignored) and fill in your local SQL Server password. -->
+<!-- The test fixture DROPS this database after the run, so use a dedicated test database. -->
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <ConnectionStrings__DefaultConnection>Server=localhost,1433;Database=IntegrationTestDb;User Id=sa;Password=YOUR_SA_PASSWORD;TrustServerCertificate=True;Encrypt=False;</ConnectionStrings__DefaultConnection>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

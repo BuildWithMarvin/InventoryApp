@@ -17,15 +17,14 @@ public class EmployeesControllerTests
 
     [Fact]
     public async Task Login_ReturnsOk_WhenBarcodeIsValid()
-    {
+        {
         await using var context =
             _databaseFixture.CreateContext();
 
         var controller = new EmployeesController(context);
 
         var employee = new Employee
-        {
-            Id = 1,
+        {   
             Name = "Bob",
             BadgeBarcode = "EMP-12345",
             Role = "User"
@@ -77,7 +76,7 @@ public class EmployeesControllerTests
 
         var newEmployee = new Employee
         {
-            Id = 2,
+         
             Name = "New admin",
             BadgeBarcode = "ADMIN-999",
             Role = "Admin"

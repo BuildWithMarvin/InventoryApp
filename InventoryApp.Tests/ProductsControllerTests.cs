@@ -1,5 +1,4 @@
 using InventoryApp.Api.Controllers;
-using InventoryApp.Api.Data;
 using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +36,7 @@ public class ProductsControllerTests
         var createdEmployee = await context.Employees
                 .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
 
-        
+
         var controller = new ProductsController(context);
 
         var product = new Product(
@@ -98,8 +97,8 @@ public class ProductsControllerTests
 
         await context.SaveChangesAsync();
 
-          var createdEmployee = await context.Employees
-                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+        var createdEmployee = await context.Employees
+              .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
 
         var controller = new ProductsController(context);
 
@@ -148,7 +147,7 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
-             var employee = new Employee
+        var employee = new Employee
         {
             Name = "John-Doe",
             BadgeBarcode = "EMP-12348",
@@ -159,7 +158,7 @@ public class ProductsControllerTests
 
         await context.SaveChangesAsync();
 
-          var createdEmployee = await context.Employees
+        var createdEmployee = await context.Employees
                 .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
 
         var controller = new ProductsController(context);
@@ -175,25 +174,15 @@ public class ProductsControllerTests
 
         context.ChangeTracker.Clear();
 
-          var updatingEmployee = new Employee
-        {
-            Name = "Bender",
-            BadgeBarcode = "EMP-12349",
-            Role = "user"
-        };
-
-        context.Employees.Add(updatingEmployee);
-
-        await context.SaveChangesAsync();
-
-          var createdUpdatingEmployee = await context.Employees
-                .SingleAsync(e => e.BadgeBarcode == updatingEmployee.BadgeBarcode);
-
         var updatedProduct = new Product(
             "10000004",
             "New product",
-            createdUpdatingEmployee.Id
+            createdEmployee.Id
         );
+
+        // A real client sends back the RowVersion it received; without it the update matches no row and returns 409.
+        context.Entry(updatedProduct).Property(p => p.RowVersion).CurrentValue =
+            originalProduct.RowVersion;
 
         var result =
             await controller.UpdateProduct(
@@ -219,7 +208,7 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
-                  var employee = new Employee
+        var employee = new Employee
         {
             Name = "Jonny-Begood",
             BadgeBarcode = "EMP-12341",
@@ -230,8 +219,8 @@ public class ProductsControllerTests
 
         await context.SaveChangesAsync();
 
-          var createdEmployee = await context.Employees
-                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+        var createdEmployee = await context.Employees
+              .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
 
         var controller = new ProductsController(context);
 
@@ -255,7 +244,7 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
-                         var employee = new Employee
+        var employee = new Employee
         {
             Name = "Klaus-Kleber",
             BadgeBarcode = "EMP-12350",
@@ -264,10 +253,10 @@ public class ProductsControllerTests
 
         context.Employees.Add(employee);
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(); 
 
-          var createdEmployee = await context.Employees
-                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+        var createdEmployee = await context.Employees
+              .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
 
         var controller = new ProductsController(context);
 

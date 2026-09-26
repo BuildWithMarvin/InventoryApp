@@ -17,6 +17,7 @@ appsettings.json
 appsettings.Development.json
 appsettings.Production.json
 secrets.json
+local.runsettings
 *.env
 
 # MAUI Specific
