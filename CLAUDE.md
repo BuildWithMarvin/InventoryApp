@@ -41,12 +41,18 @@ Integration tests run against a real SQL Server, not EF Core In-Memory. The READ
 - **Locally:** run the tests against a SQL Server Docker container on `localhost,1433` (the container runs SQL Server 2019, CI uses 2022), so you can test without pushing. `InventoryApp.Tests/local.runsettings` is gitignored and sets the variable. The test `.csproj` loads that file automatically when it exists, so plain `dotnet test` and IDE test runners pick it up. To create it, copy `local.runsettings.example` and fill in the SA password. A variable already set in the shell also works.
 - Local runs must not change how CI gets its connection string. Keep `DatabaseFixture` reading only the environment variable, and never commit `local.runsettings`, because it holds the password.
 
-Rules for integration test data:
-- All integration test classes share one database through the `"Integration Tests"` collection, and nothing resets data between tests. Each test must use its own unique keys, such as a distinct `BadgeBarcode` (`EMP-123xx`) or product barcode. Recent commits fixed exactly this kind of cross-test collision.
-- Never set `Id` on an `Employee` (or any other entity with an identity column). SQL Server assigns it and rejects explicit values. Read the generated ID back from the row the test created.
-- A test that calls `UpdateProduct` must pass the product's current `RowVersion`. A new `Product` has an empty `RowVersion`, so the update matches no row and returns 409.
+All integration test classes share one database through the `"Integration Tests"` collection (`IntegrationTestCollection`, an `ICollectionFixture<DatabaseFixture>`). Classes in the collection don't run in parallel.
 
-Two tests currently fail because they set `Id`: `EmployeesControllerTests.Login_ReturnsOk_WhenBarcodeIsValid` and `CreateEmployee_SavesToDatabase_AndReturnsOk`. The user decided not to fix them for now, so only fix them when asked. `UpdateProduct_ChangesData_AndReturnsNoContent` shows how to pass the `RowVersion` (set it through `context.Entry(...).Property(p => p.RowVersion).CurrentValue`, because the setter is private).
+Integration test classes inherit from `IntegrationTestBase`. Before each test it opens a context, exposed as `Context`, and starts a transaction; after the test it rolls the transaction back, so nothing a test writes stays in the database. Test data that several tests need, such as the employee in `ProductsControllerTests`, is created by overriding `InitializeAsync()` (call `base.InitializeAsync()` first so the data lands inside the transaction).
+
+Rules for integration tests:
+- Use only `Context`. Don't create another context through `DatabaseFixture.CreateContext()` inside a test: it runs on a different connection, can't see the uncommitted data and isn't rolled back. Don't commit the transaction.
+- Put `[Trait("Category", "Integration")]` and `[Collection("Integration Tests")]` on each test class, not only on the base class. Don't add `IClassFixture<DatabaseFixture>`; the collection already provides the fixture.
+- `DatabaseFixture` must not use `EnableRetryOnFailure()`. The retrying execution strategy rejects the user-initiated transaction in `IntegrationTestBase`.
+- Because of the rollback, keys only need to be unique within a single test. Reusing a barcode across tests is fine.
+- Never set `Id` on an `Employee` (or any other entity with an identity column). SQL Server assigns it and rejects explicit values. After `SaveChangesAsync()`, EF fills the generated ID into the entity, so use `employee.Id` directly instead of querying the row back.
+- The rollback only covers work on the test's own connection. It breaks as soon as a second connection is involved: tests through `WebApplicationFactory`/HTTP (the API gets its own `DbContext` from DI, can't see the uncommitted test data, isn't rolled back and can block on the test's locks), real concurrency tests with two contexts (the second blocks on the first transaction's locks until the command times out), API code that calls `BeginTransactionAsync()` itself (EF throws because a transaction is already open), or anything that opens its own connection. For such tests, don't use `IntegrationTestBase`; reset the database between tests instead, e.g. with Respawn. Ask the user before adding that.
+- A test that calls `UpdateProduct` must pass the product's current `RowVersion`. A new `Product` has an empty `RowVersion`, so the update matches no row and returns 409. `UpdateProduct_ChangesData_AndReturnsNoContent` shows how: set it through `Context.Entry(...).Property(p => p.RowVersion).CurrentValue`, because the setter is private.
 
 ## Architecture
 
