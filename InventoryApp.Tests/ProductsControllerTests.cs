@@ -22,6 +22,7 @@ public class ProductsControllerTests
         await using var context =
             _databaseFixture.CreateContext();
 
+
         var employee = new Employee
         {
             Name = "Max-Mustermann",
@@ -31,10 +32,11 @@ public class ProductsControllerTests
 
         context.Employees.Add(employee);
 
+        
+
         await context.SaveChangesAsync();
 
-        var createdEmployee = await context.Employees
-                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+     
 
 
         var controller = new ProductsController(context);
@@ -42,7 +44,7 @@ public class ProductsControllerTests
         var product = new Product(
             "10000001",
             "Test product",
-            createdEmployee.Id
+            employee.Id
 
     );
 
@@ -97,15 +99,12 @@ public class ProductsControllerTests
 
         await context.SaveChangesAsync();
 
-        var createdEmployee = await context.Employees
-              .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
-
         var controller = new ProductsController(context);
 
         var newProduct = new Product(
             "10000003",
             "Test product",
-            createdEmployee.Id
+            employee.Id
         );
 
         var result =
@@ -158,15 +157,12 @@ public class ProductsControllerTests
 
         await context.SaveChangesAsync();
 
-        var createdEmployee = await context.Employees
-                .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
-
         var controller = new ProductsController(context);
 
         var originalProduct = new Product(
             "10000004",
             "Old product",
-            createdEmployee.Id
+            employee.Id
         );
 
         context.Products.Add(originalProduct);
@@ -177,10 +173,10 @@ public class ProductsControllerTests
         var updatedProduct = new Product(
             "10000004",
             "New product",
-            createdEmployee.Id
+            employee.Id
         );
 
-        // A real client sends back the RowVersion it received; without it the update matches no row and returns 409.
+       
         context.Entry(updatedProduct).Property(p => p.RowVersion).CurrentValue =
             originalProduct.RowVersion;
 
@@ -219,15 +215,12 @@ public class ProductsControllerTests
 
         await context.SaveChangesAsync();
 
-        var createdEmployee = await context.Employees
-              .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
-
         var controller = new ProductsController(context);
 
         var nonExistentProduct = new Product(
             "10000005",
             "Phantom product",
-            createdEmployee.Id
+            employee.Id
         );
 
         var result =
@@ -253,17 +246,16 @@ public class ProductsControllerTests
 
         context.Employees.Add(employee);
 
-        await context.SaveChangesAsync(); 
+        await context.SaveChangesAsync();
 
-        var createdEmployee = await context.Employees
-              .SingleAsync(e => e.BadgeBarcode == employee.BadgeBarcode);
+        
 
         var controller = new ProductsController(context);
 
         var mismatchedProduct = new Product(
             "10000006",
             "Manipulated product",
-            createdEmployee.Id
+            employee.Id
         );
 
         var result =
