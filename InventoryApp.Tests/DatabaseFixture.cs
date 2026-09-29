@@ -19,9 +19,9 @@ using Microsoft.EntityFrameworkCore;
         {
             var options =
                 new DbContextOptionsBuilder<InventoryDbContext>()
-                    .UseSqlServer(
-                        _connectionString,
-                        sqlOptions => sqlOptions.EnableRetryOnFailure())
+                    // No EnableRetryOnFailure: the retrying execution strategy
+                    // rejects the per-test transactions in IntegrationTestBase.
+                    .UseSqlServer(_connectionString)
                     .Options;
 
             return new InventoryDbContext(options);

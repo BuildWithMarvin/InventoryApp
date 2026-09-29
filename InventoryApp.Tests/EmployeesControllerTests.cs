@@ -1,37 +1,31 @@
-﻿using InventoryApp.Api.Controllers;
+using InventoryApp.Api.Controllers;
 using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 [Trait("Category", "Integration")]
 [Collection("Integration Tests")]
-public class EmployeesControllerTests
- : IClassFixture<DatabaseFixture>
+public class EmployeesControllerTests : IntegrationTestBase
 {
-    private readonly DatabaseFixture _databaseFixture;
-
     public EmployeesControllerTests(DatabaseFixture databaseFixture)
+        : base(databaseFixture)
     {
-        _databaseFixture = databaseFixture;
     }
 
     [Fact]
     public async Task Login_ReturnsOk_WhenBarcodeIsValid()
-        {
-        await using var context =
-            _databaseFixture.CreateContext();
-
-        var controller = new EmployeesController(context);
+    {
+        var controller = new EmployeesController(Context);
 
         var employee = new Employee
-        {   
+        {
             Name = "Bob",
             BadgeBarcode = "EMP-12345",
             Role = "User"
         };
 
-        context.Employees.Add(employee);
-        await context.SaveChangesAsync();
+        Context.Employees.Add(employee);
+        await Context.SaveChangesAsync();
 
         var loginRequest = new LoginRequest
         {
@@ -50,10 +44,7 @@ public class EmployeesControllerTests
     [Fact]
     public async Task Login_ReturnsUnauthorized_WhenBarcodeIsInvalid()
     {
-        await using var context =
-            _databaseFixture.CreateContext();
-
-        var controller = new EmployeesController(context);
+        var controller = new EmployeesController(Context);
 
         var loginRequest = new LoginRequest
         {
@@ -69,14 +60,10 @@ public class EmployeesControllerTests
     [Fact]
     public async Task CreateEmployee_SavesToDatabase_AndReturnsOk()
     {
-        await using var context =
-            _databaseFixture.CreateContext();
-
-        var controller = new EmployeesController(context);
+        var controller = new EmployeesController(Context);
 
         var newEmployee = new Employee
         {
-         
             Name = "New admin",
             BadgeBarcode = "ADMIN-999",
             Role = "Admin"
@@ -99,20 +86,11 @@ public class EmployeesControllerTests
             "Admin",
             returnedEmployee.Role);
 
-
-
         var employeeInDb =
-            await context.Employees
+            await Context.Employees
                 .FirstOrDefaultAsync(
                     e => e.BadgeBarcode == "ADMIN-999");
-
 
         Assert.NotNull(employeeInDb);
     }
 }
-
-
-
-
-
-

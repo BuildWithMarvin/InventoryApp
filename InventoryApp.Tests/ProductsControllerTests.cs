@@ -3,58 +3,49 @@ using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-
 [Trait("Category", "Integration")]
 [Collection("Integration Tests")]
-public class ProductsControllerTests
-    : IClassFixture<DatabaseFixture>
+public class ProductsControllerTests : IntegrationTestBase
 {
-    private readonly DatabaseFixture _databaseFixture;
+    private Employee _employee = null!;
 
     public ProductsControllerTests(DatabaseFixture databaseFixture)
+        : base(databaseFixture)
     {
-        _databaseFixture = databaseFixture;
     }
 
-    [Fact]
-    public async Task GetProductByBarcode_ReturnsOk_WhenProductExists()
+    public override async Task InitializeAsync()
     {
-        await using var context =
-            _databaseFixture.CreateContext();
+        await base.InitializeAsync();
 
-
-        var employee = new Employee
+        // Created inside the test's transaction, so it is rolled back with it.
+        _employee = new Employee
         {
             Name = "Max-Mustermann",
             BadgeBarcode = "EMP-12347",
             Role = "user"
         };
 
-        context.Employees.Add(employee);
+        Context.Employees.Add(_employee);
+        await Context.SaveChangesAsync();
+    }
 
-        
-
-        await context.SaveChangesAsync();
-
-     
-
-
-        var controller = new ProductsController(context);
+    [Fact]
+    public async Task GetProductByBarcode_ReturnsOk_WhenProductExists()
+    {
+        var controller = new ProductsController(Context);
 
         var product = new Product(
             "10000001",
             "Test product",
-            employee.Id
+            _employee.Id
+        );
 
-    );
-
-        context.Products.Add(product);
-        await context.SaveChangesAsync();
+        Context.Products.Add(product);
+        await Context.SaveChangesAsync();
 
         var result =
             await controller.GetProductByBarcode("10000001");
-
-
 
         var returnedProduct =
             Assert.IsType<Product>(result.Value);
@@ -71,10 +62,7 @@ public class ProductsControllerTests
     [Fact]
     public async Task GetProductByBarcode_ReturnsNotFound_WhenBarcodeDoesNotExist()
     {
-        await using var context =
-            _databaseFixture.CreateContext();
-
-        var controller = new ProductsController(context);
+            var controller = new ProductsController(Context);
 
         var result =
             await controller.GetProductByBarcode("10000002");
@@ -85,26 +73,12 @@ public class ProductsControllerTests
     [Fact]
     public async Task CreateProduct_SavesToDatabase_AndReturnsCreatedAtAction()
     {
-        await using var context =
-            _databaseFixture.CreateContext();
-
-        var employee = new Employee
-        {
-            Name = "Max-Mueller",
-            BadgeBarcode = "EMP-12346",
-            Role = "user"
-        };
-
-        context.Employees.Add(employee);
-
-        await context.SaveChangesAsync();
-
-        var controller = new ProductsController(context);
+            var controller = new ProductsController(Context);
 
         var newProduct = new Product(
             "10000003",
             "Test product",
-            employee.Id
+            _employee.Id
         );
 
         var result =
@@ -129,7 +103,7 @@ public class ProductsControllerTests
             returnedProduct.Name);
 
         var productInDb =
-            await context.Products
+            await Context.Products
                 .FirstOrDefaultAsync(
                     p => p.InternalBarcode == "10000003");
 
@@ -143,41 +117,26 @@ public class ProductsControllerTests
     [Fact]
     public async Task UpdateProduct_ChangesData_AndReturnsNoContent()
     {
-        await using var context =
-            _databaseFixture.CreateContext();
-
-        var employee = new Employee
-        {
-            Name = "John-Doe",
-            BadgeBarcode = "EMP-12348",
-            Role = "user"
-        };
-
-        context.Employees.Add(employee);
-
-        await context.SaveChangesAsync();
-
-        var controller = new ProductsController(context);
+            var controller = new ProductsController(Context);
 
         var originalProduct = new Product(
             "10000004",
             "Old product",
-            employee.Id
+            _employee.Id
         );
 
-        context.Products.Add(originalProduct);
-        await context.SaveChangesAsync();
+        Context.Products.Add(originalProduct);
+        await Context.SaveChangesAsync();
 
-        context.ChangeTracker.Clear();
+        Context.ChangeTracker.Clear();
 
         var updatedProduct = new Product(
             "10000004",
             "New product",
-            employee.Id
+            _employee.Id
         );
 
-       
-        context.Entry(updatedProduct).Property(p => p.RowVersion).CurrentValue =
+        Context.Entry(updatedProduct).Property(p => p.RowVersion).CurrentValue =
             originalProduct.RowVersion;
 
         var result =
@@ -188,7 +147,7 @@ public class ProductsControllerTests
         Assert.IsType<NoContentResult>(result);
 
         var productInDb =
-            await context.Products
+            await Context.Products
                 .FindAsync("10000004");
 
         Assert.NotNull(productInDb);
@@ -201,26 +160,12 @@ public class ProductsControllerTests
     [Fact]
     public async Task UpdateProduct_ReturnsNotFound_WhenProductDoesNotExist()
     {
-        await using var context =
-            _databaseFixture.CreateContext();
-
-        var employee = new Employee
-        {
-            Name = "Jonny-Begood",
-            BadgeBarcode = "EMP-12341",
-            Role = "user"
-        };
-
-        context.Employees.Add(employee);
-
-        await context.SaveChangesAsync();
-
-        var controller = new ProductsController(context);
+            var controller = new ProductsController(Context);
 
         var nonExistentProduct = new Product(
             "10000005",
             "Phantom product",
-            employee.Id
+            _employee.Id
         );
 
         var result =
@@ -234,28 +179,12 @@ public class ProductsControllerTests
     [Fact]
     public async Task UpdateProduct_ReturnsBadRequest_WhenIdsDoNotMatch()
     {
-        await using var context =
-            _databaseFixture.CreateContext();
-
-        var employee = new Employee
-        {
-            Name = "Klaus-Kleber",
-            BadgeBarcode = "EMP-12350",
-            Role = "user"
-        };
-
-        context.Employees.Add(employee);
-
-        await context.SaveChangesAsync();
-
-        
-
-        var controller = new ProductsController(context);
+            var controller = new ProductsController(Context);
 
         var mismatchedProduct = new Product(
             "10000006",
             "Manipulated product",
-            employee.Id
+            _employee.Id
         );
 
         var result =
