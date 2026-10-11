@@ -11,28 +11,29 @@ namespace InventoryApp.Api.Models
 
 
         public Product(
-    string internalBarcode,
-    string name,
-    int createdByEmployeeId,
+         
+         string internalBarcode,
+            string name,
+            int createdByEmployeeId,
     string? supplierBarcode = null)
-{
-    if (string.IsNullOrWhiteSpace(internalBarcode))
-        throw new ArgumentException(
-            "A barcode is required.",
-            nameof(internalBarcode));
+        {
+            if (string.IsNullOrWhiteSpace(internalBarcode))
+                throw new ArgumentException(
+                    "A barcode is required.",
+                    nameof(internalBarcode));
 
-    if (string.IsNullOrWhiteSpace(name))
-        throw new ArgumentException(
-            "A name is required.",
-            nameof(name));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException(
+                    "A name is required.",
+                    nameof(name));
 
-    InternalBarcode = internalBarcode.Trim();
-    Name = name.Trim();
-    LastUpdatedByEmployeeId = createdByEmployeeId;
-    SupplierBarcode = string.IsNullOrWhiteSpace(supplierBarcode)
-        ? null
-        : supplierBarcode.Trim();
-}
+            InternalBarcode = internalBarcode.Trim();
+            Name = name.Trim();
+            LastUpdatedByEmployeeId = createdByEmployeeId;
+            SupplierBarcode = string.IsNullOrWhiteSpace(supplierBarcode)
+                ? null
+                : supplierBarcode.Trim();
+        }
         [Key]
         [MaxLength(50)]
         public string InternalBarcode { get; private set; }

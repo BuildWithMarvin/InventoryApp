@@ -8,7 +8,7 @@ namespace InventoryApp.Tests.Unit
         [Fact]
         public void Constructor_CreatesProduct_WithValidData()
         {
-            // Arrange & Act
+           
             var product = new Product(
                 "12345678",
                 "Test product",
@@ -16,7 +16,6 @@ namespace InventoryApp.Tests.Unit
                 "SUP-123"
             );
 
-            // Assert
             Assert.Equal("12345678", product.InternalBarcode);
             Assert.Equal("Test product", product.Name);
             Assert.Equal("SUP-123", product.SupplierBarcode);

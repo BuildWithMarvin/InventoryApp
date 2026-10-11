@@ -19,12 +19,10 @@ public class ProductsControllerTests : IntegrationTestBase
         await base.InitializeAsync();
 
         // Created inside the test's transaction, so it is rolled back with it.
-        _employee = new Employee
-        {
-            Name = "Max-Mustermann",
-            BadgeBarcode = "EMP-12347",
-            Role = "user"
-        };
+        _employee = new Employee(
+            "Max-Mustermann",
+             "EMP-123",
+             "user");
 
         Context.Employees.Add(_employee);
         await Context.SaveChangesAsync();
@@ -62,7 +60,7 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task GetProductByBarcode_ReturnsNotFound_WhenBarcodeDoesNotExist()
     {
-            var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context);
 
         var result =
             await controller.GetProductByBarcode("10000002");
@@ -73,7 +71,7 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task CreateProduct_SavesToDatabase_AndReturnsCreatedAtAction()
     {
-            var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context);
 
         var newProduct = new Product(
             "10000003",
@@ -117,7 +115,7 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task UpdateProduct_ChangesData_AndReturnsNoContent()
     {
-            var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context);
 
         var originalProduct = new Product(
             "10000004",
@@ -160,7 +158,7 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task UpdateProduct_ReturnsNotFound_WhenProductDoesNotExist()
     {
-            var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context);
 
         var nonExistentProduct = new Product(
             "10000005",
@@ -179,7 +177,7 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task UpdateProduct_ReturnsBadRequest_WhenIdsDoNotMatch()
     {
-            var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context);
 
         var mismatchedProduct = new Product(
             "10000006",

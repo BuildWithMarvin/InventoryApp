@@ -17,12 +17,13 @@ public class EmployeesControllerTests : IntegrationTestBase
     {
         var controller = new EmployeesController(Context);
 
-        var employee = new Employee
-        {
-            Name = "Bob",
-            BadgeBarcode = "EMP-12345",
-            Role = "User"
-        };
+        var employee = new Employee(
+            "Bob",
+            "EMP-12345",
+            "User");
+            
+        
+
 
         Context.Employees.Add(employee);
         await Context.SaveChangesAsync();
@@ -62,12 +63,12 @@ public class EmployeesControllerTests : IntegrationTestBase
     {
         var controller = new EmployeesController(Context);
 
-        var newEmployee = new Employee
-        {
-            Name = "New admin",
-            BadgeBarcode = "ADMIN-999",
-            Role = "Admin"
-        };
+        var newEmployee = new Employee(
+            "New admin",
+            "ADMIN-999",
+            "Admin");
+            
+       
 
         var result =
             await controller.CreateEmployee(newEmployee);
