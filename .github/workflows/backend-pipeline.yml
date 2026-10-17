@@ -14,7 +14,7 @@ on:
 jobs:
 
   # ---------------------------------------------
-  # CI - Bauen & Testen
+  # CI - Build & Test
   # ---------------------------------------------
   build-and-test:
     runs-on: ubuntu-latest

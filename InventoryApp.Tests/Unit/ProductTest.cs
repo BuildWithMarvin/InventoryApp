@@ -8,7 +8,7 @@ namespace InventoryApp.Tests.Unit
         [Fact]
         public void Constructor_CreatesProduct_WithValidData()
         {
-           
+
             var product = new Product(
                 "12345678",
                 "Test product",

@@ -4,7 +4,8 @@ namespace InventoryApp.Tests.Unit;
 
 [Trait("Category", "Unit")]
 public class EmployeeTest
-{   [Fact]
+{
+    [Fact]
     public void Constructor_CreatesEmployee_WithValidData()
     {
 
@@ -30,7 +31,7 @@ public class EmployeeTest
         Assert.Equal("Tom", employee.Name);
     }
     [Fact]
-     public void Constructor_TrimsBadgeBarcode()
+    public void Constructor_TrimsBadgeBarcode()
     {
 
         var employee = new Employee(
@@ -53,45 +54,45 @@ public class EmployeeTest
         Assert.Equal("Admin", employee.Role);
     }
     [Fact]
-       public void Constructor_ThrowsArgumentException_WhenNameIsEmpty()
-        {
+    public void Constructor_ThrowsArgumentException_WhenNameIsEmpty()
+    {
 
-            Assert.Throws<ArgumentException>(() =>
-                new Employee("", "EMP-12345"));
-        }
+        Assert.Throws<ArgumentException>(() =>
+            new Employee("", "EMP-12345"));
+    }
     [Fact]
-        public void Constructor_ThrowsArgumentException_WhenNameIsWhitespace()
-        {
+    public void Constructor_ThrowsArgumentException_WhenNameIsWhitespace()
+    {
 
-            Assert.Throws<ArgumentException>(() =>
-                new Employee("   ", "EMP-12345"));
-        }
+        Assert.Throws<ArgumentException>(() =>
+            new Employee("   ", "EMP-12345"));
+    }
     [Fact]
-        public void Constructor_ThrowsArgumentException_WhenBadgeBarcodeIsEmpty()
-        {
+    public void Constructor_ThrowsArgumentException_WhenBadgeBarcodeIsEmpty()
+    {
 
-            Assert.Throws<ArgumentException>(() =>
-                new Employee("Tom", ""));
-        }
+        Assert.Throws<ArgumentException>(() =>
+            new Employee("Tom", ""));
+    }
     [Fact]
-        public void Constructor_ThrowsArgumentException_WhenBadgeBarcodeIsWhitespace()
-        {
+    public void Constructor_ThrowsArgumentException_WhenBadgeBarcodeIsWhitespace()
+    {
 
-            Assert.Throws<ArgumentException>(() =>
-                new Employee("Tom", "   "));
-        }
+        Assert.Throws<ArgumentException>(() =>
+            new Employee("Tom", "   "));
+    }
     [Fact]
-        public void Constructor_ThrowsArgumentException_RoleIsNull()
-        {
+    public void Constructor_ThrowsArgumentException_RoleIsNull()
+    {
 
-            Assert.Throws<ArgumentException>(() =>
-                new Employee("Tom", "EMP-12345", null));
-        }
+        Assert.Throws<ArgumentException>(() =>
+            new Employee("Tom", "EMP-12345", null));
+    }
     [Fact]
-         public void Constructor_ThrowsArgumentException_RoleIsWhitespace()
-        {
+    public void Constructor_ThrowsArgumentException_RoleIsWhitespace()
+    {
 
-            Assert.Throws<ArgumentException>(() =>
-                new Employee("Tom", "EMP-12345", "   "));
-        }
+        Assert.Throws<ArgumentException>(() =>
+            new Employee("Tom", "EMP-12345", "   "));
+    }
 }

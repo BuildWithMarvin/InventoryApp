@@ -21,8 +21,8 @@ public class EmployeesControllerTests : IntegrationTestBase
             "Bob",
             "EMP-12345",
             "User");
-            
-        
+
+
 
 
         Context.Employees.Add(employee);
@@ -67,8 +67,8 @@ public class EmployeesControllerTests : IntegrationTestBase
             "New admin",
             "ADMIN-999",
             "Admin");
-            
-       
+
+
 
         var result =
             await controller.CreateEmployee(newEmployee);
