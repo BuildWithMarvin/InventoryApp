@@ -1,8 +1,11 @@
 using InventoryApp.Api.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Respawn;
 public class DatabaseFixture : IAsyncLifetime
 {
     private readonly string _connectionString;
+    private Respawner _respawner = null!;
 
     public DatabaseFixture()
     {
@@ -17,8 +20,6 @@ public class DatabaseFixture : IAsyncLifetime
     {
         var options =
             new DbContextOptionsBuilder<InventoryDbContext>()
-                // No EnableRetryOnFailure: the retrying execution strategy
-                // rejects the per-test transactions in IntegrationTestBase.
                 .UseSqlServer(_connectionString)
                 .Options;
 
@@ -30,6 +31,23 @@ public class DatabaseFixture : IAsyncLifetime
         await using var context = CreateContext();
 
         await context.Database.MigrateAsync();
+
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+        {
+            DbAdapter = DbAdapter.SqlServer,
+            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")]
+        });
+    }
+
+    public async Task ResetDatabaseAsync()
+    {
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await _respawner.ResetAsync(connection);
     }
 
     public async Task DisposeAsync()

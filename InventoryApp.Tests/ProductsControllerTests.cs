@@ -18,7 +18,7 @@ public class ProductsControllerTests : IntegrationTestBase
     {
         await base.InitializeAsync();
 
-        // Created inside the test's transaction, so it is rolled back with it.
+        // Removed again by the database reset before the next test.
         _employee = new Employee(
             "Max-Mustermann",
              "EMP-123",
