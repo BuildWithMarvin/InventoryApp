@@ -1,4 +1,5 @@
-﻿using InventoryApp.Api.Data;
+using InventoryApp.Api.Data;
+using InventoryApp.Api.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using InventoryApp.Api.Models;
@@ -17,10 +18,10 @@ namespace InventoryApp.Api.Controllers
         }
 
         [HttpGet("{internalBarcode}")]
-        public async Task<ActionResult<Product>> GetProductByBarcode(string internalBarcode)
+        public async Task<ActionResult<ProductDto>> GetProductByBarcode(string internalBarcode)
         {
             var product = await _context.Products
-                .Include(p => p.Stocks) 
+                .Include(p => p.Stocks)
                 .FirstOrDefaultAsync(p => p.InternalBarcode == internalBarcode);
 
             if (product == null)
@@ -28,42 +29,89 @@ namespace InventoryApp.Api.Controllers
                 return NotFound();
             }
 
-            return product;
+            return ProductDto.FromEntity(product);
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
             // Note: For future scaling (e.g., > 50,000 items), consider implementing pagination (Skip/Take).
-            return await _context.Products
+            var products = await _context.Products
                 .Include(p => p.Stocks)
                 .ToListAsync();
+
+            return products.Select(ProductDto.FromEntity).ToList();
         }
 
         [HttpPost]
-        public async Task<ActionResult<Product>> CreateProduct(Product product)
+        public async Task<ActionResult<ProductDto>> CreateProduct(CreateProductRequest request)
         {
-            if (ProductExists(product.InternalBarcode))
+            if (await ProductExistsAsync(request.InternalBarcode))
             {
                 return Conflict("Barcode already assigned.");
             }
 
-            // FIXED: Removal of the assignment of ‘RowVersion’. SQL Server automatically fills ‘byte[]’.// Includes the inventory in the memory areas
+            if (!await EmployeeExistsAsync(request.EmployeeId))
+            {
+                return BadRequest($"Employee {request.EmployeeId} not found.");
+            }
+
+            Product product;
+
+            try
+            {
+                product = new Product(
+                    request.InternalBarcode,
+                    request.Name,
+                    request.EmployeeId,
+                    request.SupplierBarcode);
+
+                product.UpdateDetails(product.Name, request.Description, request.EmployeeId);
+                product.UpdatePrice(request.Price, request.EmployeeId);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            // SQL Server fills RowVersion on insert.
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetProductByBarcode), new { internalBarcode = product.InternalBarcode }, product);
+            return CreatedAtAction(
+                nameof(GetProductByBarcode),
+                new { internalBarcode = product.InternalBarcode },
+                ProductDto.FromEntity(product));
         }
 
         [HttpPut("{internalBarcode}")]
-        public async Task<IActionResult> UpdateProduct(string internalBarcode, Product product)
+        public async Task<IActionResult> UpdateProduct(string internalBarcode, UpdateProductRequest request)
         {
-            if (internalBarcode != product.InternalBarcode)
+            var product = await _context.Products.FindAsync(internalBarcode);
+
+            if (product == null)
             {
-                return BadRequest("Product Barcode mismatch.");
+                return NotFound($"Product with Barcode {internalBarcode} not found.");
             }
 
-            _context.Entry(product).State = EntityState.Modified;
+            if (!await EmployeeExistsAsync(request.EmployeeId))
+            {
+                return BadRequest($"Employee {request.EmployeeId} not found.");
+            }
+
+            // Compare against the version the client read, not the one just loaded.
+            _context.Entry(product).Property(p => p.RowVersion).OriginalValue = request.RowVersion;
+
+            try
+            {
+                product.UpdateDetails(request.Name, request.Description, request.EmployeeId);
+                product.UpdateSupplierBarcode(request.SupplierBarcode, request.EmployeeId);
+                product.UpdatePrice(request.Price, request.EmployeeId);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             try
             {
@@ -71,7 +119,7 @@ namespace InventoryApp.Api.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ProductExists(internalBarcode))
+                if (!await ProductExistsAsync(internalBarcode))
                 {
                     return NotFound($"Product with Barcode {internalBarcode} not found.");
                 }
@@ -84,9 +132,14 @@ namespace InventoryApp.Api.Controllers
             return NoContent();
         }
 
-        private bool ProductExists(string internalBarcode)
+        private Task<bool> ProductExistsAsync(string internalBarcode)
         {
-            return _context.Products.Any(e => e.InternalBarcode == internalBarcode);
+            return _context.Products.AnyAsync(e => e.InternalBarcode == internalBarcode);
+        }
+
+        private Task<bool> EmployeeExistsAsync(int employeeId)
+        {
+            return _context.Employees.AnyAsync(e => e.Id == employeeId);
         }
     }
 }

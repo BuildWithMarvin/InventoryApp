@@ -1,4 +1,5 @@
 using InventoryApp.Api.Controllers;
+using InventoryApp.Api.Dtos;
 using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,7 @@ public class ProductsControllerTests : IntegrationTestBase
             await controller.GetProductByBarcode("10000001");
 
         var returnedProduct =
-            Assert.IsType<Product>(result.Value);
+            Assert.IsType<ProductDto>(result.Value);
 
         Assert.Equal(
             "10000001",
@@ -73,7 +74,7 @@ public class ProductsControllerTests : IntegrationTestBase
     {
         var controller = new ProductsController(Context);
 
-        var newProduct = new Product(
+        var newProduct = new CreateProductRequest(
             "10000003",
             "Test product",
             _employee.Id
@@ -90,7 +91,7 @@ public class ProductsControllerTests : IntegrationTestBase
             createdResult.ActionName);
 
         var returnedProduct =
-            Assert.IsType<Product>(createdResult.Value);
+            Assert.IsType<ProductDto>(createdResult.Value);
 
         Assert.Equal(
             "10000003",
@@ -128,14 +129,11 @@ public class ProductsControllerTests : IntegrationTestBase
 
         Context.ChangeTracker.Clear();
 
-        var updatedProduct = new Product(
-            "10000004",
+        var updatedProduct = new UpdateProductRequest(
             "New product",
-            _employee.Id
+            _employee.Id,
+            originalProduct.RowVersion
         );
-
-        Context.Entry(updatedProduct).Property(p => p.RowVersion).CurrentValue =
-            originalProduct.RowVersion;
 
         var result =
             await controller.UpdateProduct(
@@ -160,10 +158,10 @@ public class ProductsControllerTests : IntegrationTestBase
     {
         var controller = new ProductsController(Context);
 
-        var nonExistentProduct = new Product(
-            "10000005",
+        var nonExistentProduct = new UpdateProductRequest(
             "Phantom product",
-            _employee.Id
+            _employee.Id,
+            new byte[8]
         );
 
         var result =
@@ -175,21 +173,32 @@ public class ProductsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task UpdateProduct_ReturnsBadRequest_WhenIdsDoNotMatch()
+    public async Task UpdateProduct_ReturnsConflict_WhenRowVersionIsStale()
     {
         var controller = new ProductsController(Context);
 
-        var mismatchedProduct = new Product(
+        var product = new Product(
             "10000006",
-            "Manipulated product",
+            "Old product",
             _employee.Id
+        );
+
+        Context.Products.Add(product);
+        await Context.SaveChangesAsync();
+
+        Context.ChangeTracker.Clear();
+
+        var staleUpdate = new UpdateProductRequest(
+            "New product",
+            _employee.Id,
+            new byte[8]
         );
 
         var result =
             await controller.UpdateProduct(
-                "10000004",
-                mismatchedProduct);
+                "10000006",
+                staleUpdate);
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.IsType<ConflictObjectResult>(result);
     }
 }

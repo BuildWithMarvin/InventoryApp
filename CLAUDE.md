@@ -50,13 +50,14 @@ Rules for integration tests:
 - Data is committed for real, so a second context, an HTTP call through `WebApplicationFactory`, or API code that opens its own transaction all see it. Classes in the collection still must not run in parallel, because the reset wipes the shared database.
 - Because of the reset, keys only need to be unique within a single test. Reusing a barcode across tests is fine.
 - Never set `Id` on an `Employee` (or any other entity with an identity column). SQL Server assigns it and rejects explicit values. After `SaveChangesAsync()`, EF fills the generated ID into the entity, so use `employee.Id` directly instead of querying the row back.
-- A test that calls `UpdateProduct` must pass the product's current `RowVersion`. A new `Product` has an empty `RowVersion`, so the update matches no row and returns 409. `UpdateProduct_ChangesData_AndReturnsNoContent` shows how: set it through `Context.Entry(...).Property(p => p.RowVersion).CurrentValue`, because the setter is private.
+- A test that calls `UpdateProduct` must put the product's current `RowVersion` into the `UpdateProductRequest` (e.g. `originalProduct.RowVersion` after `SaveChangesAsync()`). Any other value makes the update match no row and return 409, which `UpdateProduct_ReturnsConflict_WhenRowVersionIsStale` relies on.
 
 ## Architecture
 
 ### API
 
 - Controllers take `InventoryDbContext` directly. There's no service or repository layer, and tests construct controllers with `new ProductsController(context)`.
+- Controllers never bind or return entities. Request and response types are records in `Dtos/` (`CreateProductRequest`, `UpdateProductRequest`, `ProductDto`, `CreateEmployeeRequest`, `EmployeeDto`, `LoginRequest`), each response DTO with a static `FromEntity`. Controllers build entities through their constructors and mutation methods and turn the `ArgumentException`s they throw into 400. Write requests carry an `EmployeeId` because there is no authentication yet; the controller returns 400 if that employee doesn't exist.
 - `Program.cs` calls `db.Database.Migrate()` on startup. The CD pipeline also runs `dotnet ef database update` against Azure before it deploys.
 - The domain models `Product` and `ProductStock` are rich entities. They have private setters, a private parameterless constructor for EF, a validating public constructor, and mutation methods (`UpdatePrice`, `AddStock`, `RemoveStock`, …) that enforce invariants and record `LastUpdatedByEmployeeId`. Change state through those methods rather than adding public setters. `Employee` and `StorageLocation` are plain POCOs.
 - `Product` is keyed by the string `InternalBarcode`, not an int `Id`. Stock quantities live in `ProductStock` rows, one per product and `StorageLocation` pair, with a unique index on that pair. `Product.TotalQuantity` is computed from `Stocks`.

@@ -1,4 +1,5 @@
 ﻿using InventoryApp.Api.Data;
+using InventoryApp.Api.Dtos;
 using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,7 @@ namespace InventoryApp.Api.Controllers
 
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<ActionResult<EmployeeDto>> Login([FromBody] LoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.BadgeBarcode))
             {
@@ -36,13 +37,25 @@ namespace InventoryApp.Api.Controllers
                 return Unauthorized("Invalid employee ID card.");
             }
 
-            return Ok(employee);
+            return Ok(EmployeeDto.FromEntity(employee));
         }
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateEmployee([FromBody] Employee newEmployee)
+        public async Task<ActionResult<EmployeeDto>> CreateEmployee([FromBody] CreateEmployeeRequest request)
         {
+            Employee newEmployee;
+
+            try
+            {
+                newEmployee = request.Role == null
+                    ? new Employee(request.Name, request.BadgeBarcode)
+                    : new Employee(request.Name, request.BadgeBarcode, request.Role);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             var barcodeExists = await _context.Employees
                 .AnyAsync(e => e.BadgeBarcode == newEmployee.BadgeBarcode);
@@ -55,7 +68,7 @@ namespace InventoryApp.Api.Controllers
             _context.Employees.Add(newEmployee);
             await _context.SaveChangesAsync();
 
-            return Ok(newEmployee);
+            return Ok(EmployeeDto.FromEntity(newEmployee));
         }
     }
 

@@ -63,7 +63,7 @@ namespace InventoryApp.Api.Models
 
         public ICollection<ProductStock> Stocks { get; } = new List<ProductStock>();
 
-        public void UpdateSupplierBarcode(string supplierBarcode, int employeeId)
+        public void UpdateSupplierBarcode(string? supplierBarcode, int employeeId)
         {
             SupplierBarcode = string.IsNullOrWhiteSpace(supplierBarcode) ? null : supplierBarcode.Trim();
             LastUpdatedByEmployeeId = employeeId;

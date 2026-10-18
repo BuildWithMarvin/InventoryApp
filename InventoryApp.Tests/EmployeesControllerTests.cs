@@ -1,4 +1,5 @@
 using InventoryApp.Api.Controllers;
+using InventoryApp.Api.Dtos;
 using InventoryApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,18 +29,20 @@ public class EmployeesControllerTests : IntegrationTestBase
         Context.Employees.Add(employee);
         await Context.SaveChangesAsync();
 
-        var loginRequest = new LoginRequest
-        {
-            BadgeBarcode = "EMP-12345"
-        };
+        var loginRequest = new LoginRequest("EMP-12345");
 
         var result =
             await controller.Login(loginRequest);
 
         var okResult =
-            Assert.IsType<OkObjectResult>(result);
+            Assert.IsType<OkObjectResult>(result.Result);
 
-        Assert.NotNull(okResult.Value);
+        var returnedEmployee =
+            Assert.IsType<EmployeeDto>(okResult.Value);
+
+        Assert.Equal(
+            employee.Id,
+            returnedEmployee.Id);
     }
 
     [Fact]
@@ -47,15 +50,12 @@ public class EmployeesControllerTests : IntegrationTestBase
     {
         var controller = new EmployeesController(Context);
 
-        var loginRequest = new LoginRequest
-        {
-            BadgeBarcode = "WRONG-BARCODE"
-        };
+        var loginRequest = new LoginRequest("WRONG-BARCODE");
 
         var result =
             await controller.Login(loginRequest);
 
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        Assert.IsType<UnauthorizedObjectResult>(result.Result);
     }
 
     [Fact]
@@ -63,21 +63,19 @@ public class EmployeesControllerTests : IntegrationTestBase
     {
         var controller = new EmployeesController(Context);
 
-        var newEmployee = new Employee(
+        var newEmployee = new CreateEmployeeRequest(
             "New admin",
             "ADMIN-999",
             "Admin");
-
-
 
         var result =
             await controller.CreateEmployee(newEmployee);
 
         var okResult =
-            Assert.IsType<OkObjectResult>(result);
+            Assert.IsType<OkObjectResult>(result.Result);
 
         var returnedEmployee =
-            Assert.IsType<Employee>(okResult.Value);
+            Assert.IsType<EmployeeDto>(okResult.Value);
 
         Assert.Equal(
             "ADMIN-999",
