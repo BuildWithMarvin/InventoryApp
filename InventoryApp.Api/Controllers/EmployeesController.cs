@@ -1,6 +1,7 @@
 ﻿using InventoryApp.Api.Data;
 using InventoryApp.Api.Dtos;
 using InventoryApp.Api.Models;
+using InventoryApp.Api.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,7 +30,8 @@ namespace InventoryApp.Api.Controllers
 
 
             var employee = await _context.Employees
-                .FirstOrDefaultAsync(e => e.BadgeBarcode == request.BadgeBarcode);
+                .Include(e => e.EmployeeRoles).ThenInclude(er => er.Role)
+                .FirstOrDefaultAsync(e => e.BadgeBarcode == request.BadgeBarcode && e.IsActive);
 
             if (employee == null)
             {
@@ -44,13 +46,21 @@ namespace InventoryApp.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<EmployeeDto>> CreateEmployee([FromBody] CreateEmployeeRequest request)
         {
+            var roleName = request.Role ?? DefaultRoles.WarehouseEmployee;
+
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == roleName);
+
+            if (role == null)
+            {
+                return BadRequest($"Role '{roleName}' not found.");
+            }
+
             Employee newEmployee;
 
             try
             {
-                newEmployee = request.Role == null
-                    ? new Employee(_context.RequireTenantId(), request.Name, request.BadgeBarcode)
-                    : new Employee(_context.RequireTenantId(), request.Name, request.BadgeBarcode, request.Role);
+                newEmployee = new Employee(_context.RequireTenantId(), request.Name, request.BadgeBarcode);
+                newEmployee.AssignRole(role);
             }
             catch (ArgumentException ex)
             {

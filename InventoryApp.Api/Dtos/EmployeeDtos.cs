@@ -3,14 +3,21 @@ using InventoryApp.Api.Models;
 
 namespace InventoryApp.Api.Dtos
 {
-    public record EmployeeDto(int Id, string Name, string BadgeBarcode, string Role)
+    // Roles needs EmployeeRoles and their Role loaded.
+    public record EmployeeDto(int Id, string Name, string BadgeBarcode, bool IsActive, IReadOnlyList<string> Roles)
     {
         public static EmployeeDto FromEntity(Employee employee) =>
-            new(employee.Id, employee.Name, employee.BadgeBarcode, employee.Role);
+            new(
+                employee.Id,
+                employee.Name,
+                employee.BadgeBarcode,
+                employee.IsActive,
+                employee.EmployeeRoles.Select(er => er.Role!.Name).Order().ToList());
     }
 
     public record CreateEmployeeRequest(
         [Required, MaxLength(100)] string Name,
         [Required, MaxLength(50)] string BadgeBarcode,
-        [MaxLength(20)] string? Role = null);
+        // Name of an inventory role of the tenant. Defaults to WarehouseEmployee.
+        [MaxLength(50)] string? Role = null);
 }

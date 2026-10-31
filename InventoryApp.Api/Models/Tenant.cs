@@ -22,6 +22,11 @@ namespace InventoryApp.Api.Models
 
         public bool IsActive { get; private set; } = true;
 
+        /// <summary>When set, every employee of the tenant must log in with a PIN.</summary>
+        public bool RequirePin { get; private set; }
+
+        public void SetRequirePin(bool required) => RequirePin = required;
+
         public void Rename(string name)
         {
             Name = NormalizeName(name);

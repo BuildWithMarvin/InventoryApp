@@ -41,6 +41,19 @@ public class TenantTests
         Assert.True(tenant.IsActive);
     }
 
+    [Fact]
+    public void RequirePin_IsOffByDefault_AndCanBeSwitched()
+    {
+        var tenant = new Tenant("Acme");
+        Assert.False(tenant.RequirePin);
+
+        tenant.SetRequirePin(true);
+        Assert.True(tenant.RequirePin);
+
+        tenant.SetRequirePin(false);
+        Assert.False(tenant.RequirePin);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]

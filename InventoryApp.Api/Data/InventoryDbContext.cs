@@ -18,6 +18,9 @@ namespace InventoryApp.Api.Data
         public DbSet<Employee> Employees => Set<Employee>();
         public DbSet<StorageLocation> StorageLocations => Set<StorageLocation>();
         public DbSet<ProductStock> ProductStocks => Set<ProductStock>();
+        public DbSet<Role> Roles => Set<Role>();
+        public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+        public DbSet<EmployeeRole> EmployeeRoles => Set<EmployeeRole>();
 
         /// <summary>The tenant this context works for, or null if none has been set.</summary>
         public int? CurrentTenantId => _tenant.TenantId;
@@ -65,6 +68,73 @@ namespace InventoryApp.Api.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 location.HasQueryFilter(l => l.TenantId == CurrentTenantId);
+            });
+
+            modelBuilder.Entity<Role>(role =>
+            {
+                role.HasAlternateKey(r => new { r.TenantId, r.Id });
+
+                // Lets EmployeeRole reference a role together with its scope, so the database
+                // itself refuses to give an employee anything but an Inventory role.
+                role.HasAlternateKey(r => new { r.TenantId, r.Id, r.Scope });
+
+                role.HasIndex(r => new { r.TenantId, r.Name })
+                    .IsUnique();
+
+                role.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(r => r.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                role.HasQueryFilter(r => r.TenantId == CurrentTenantId);
+            });
+
+            modelBuilder.Entity<RolePermission>(rolePermission =>
+            {
+                rolePermission.HasKey(rp => new { rp.RoleId, rp.Permission });
+
+                rolePermission.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(rp => rp.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                rolePermission.HasOne<Role>()
+                    .WithMany(r => r.Permissions)
+                    .HasForeignKey(rp => new { rp.TenantId, rp.RoleId })
+                    .HasPrincipalKey(r => new { r.TenantId, r.Id })
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                rolePermission.HasQueryFilter(rp => rp.TenantId == CurrentTenantId);
+            });
+
+            modelBuilder.Entity<EmployeeRole>(employeeRole =>
+            {
+                employeeRole.HasKey(er => new { er.EmployeeId, er.RoleId });
+
+                // With the foreign key below this makes the database refuse admin roles for employees:
+                // the key only matches the role's real scope, and the check only allows Inventory (0).
+                employeeRole.ToTable(t => t.HasCheckConstraint("CK_EmployeeRoles_InventoryRoleOnly", "[RoleScope] = 0"));
+
+                employeeRole.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(er => er.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                employeeRole.HasOne(er => er.Employee)
+                    .WithMany(e => e.EmployeeRoles)
+                    .HasForeignKey(er => new { er.TenantId, er.EmployeeId })
+                    .HasPrincipalKey(e => new { e.TenantId, e.Id })
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // RoleScope is only ever Inventory (Employee.AssignRole), so this key can only
+                // match Inventory roles. A role in use can't be deleted.
+                employeeRole.HasOne(er => er.Role)
+                    .WithMany()
+                    .HasForeignKey(er => new { er.TenantId, er.RoleId, er.RoleScope })
+                    .HasPrincipalKey(r => new { r.TenantId, r.Id, r.Scope })
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                employeeRole.HasQueryFilter(er => er.TenantId == CurrentTenantId);
             });
 
             modelBuilder.Entity<Product>(product =>

@@ -23,8 +23,7 @@ public class ProductsControllerTests : IntegrationTestBase
         _employee = new Employee(
             TenantId,
             "Max-Mustermann",
-             "EMP-123",
-             "user");
+             "EMP-123");
 
         Context.Employees.Add(_employee);
         await Context.SaveChangesAsync();

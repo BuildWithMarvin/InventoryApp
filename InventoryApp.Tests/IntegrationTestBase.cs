@@ -1,5 +1,6 @@
 using InventoryApp.Api.Data;
 using InventoryApp.Api.Models;
+using InventoryApp.Api.Security;
 
 public abstract class IntegrationTestBase : IAsyncLifetime
 {
@@ -35,6 +36,11 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         var tenant = new Tenant(name);
         context.Tenants.Add(tenant);
         await context.SaveChangesAsync();
+
+        // Every tenant starts with the default roles, as it will in production.
+        await using var tenantContext = _databaseFixture.CreateContext(tenant.Id);
+        tenantContext.Roles.AddRange(DefaultRoles.CreateFor(tenant.Id));
+        await tenantContext.SaveChangesAsync();
 
         return tenant;
     }
