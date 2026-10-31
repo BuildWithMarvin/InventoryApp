@@ -11,6 +11,8 @@ Projects:
 - `InventoryApp.Tests` — xUnit tests for the API, `net10.0`
 - `InventoryApp.Maui` — **legacy client that will be replaced by a React frontend** because of unresolved MAUI/Android compatibility issues. Don't invest in new MAUI features; keep the API frontend-agnostic (plain JSON over HTTP). It uses MVVM via CommunityToolkit.Mvvm and ZXing.Net.Maui for scanning, targets `net8.0-android/ios/maccatalyst`, and isn't in `InventoryApp.sln`.
 
+**Multi-tenancy and security refactor in progress** (branch `ft/multi-tenancy`): read `docs/PROJECT_CONTEXT.md` first. It records the confirmed decisions, the assumptions made, the open issues, the implementation status and the remaining phases.
+
 ## Commands
 
 ```bash
