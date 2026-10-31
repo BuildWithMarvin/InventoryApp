@@ -5,11 +5,14 @@ namespace InventoryApp.Tests.Unit;
 [Trait("Category", "Unit")]
 public class EmployeeTest
 {
+    private const int TenantId = 1;
+
     [Fact]
     public void Constructor_CreatesEmployee_WithValidData()
     {
 
         var employee = new Employee(
+            TenantId,
             "Tom",
             "EMP-12345"
         );
@@ -24,6 +27,7 @@ public class EmployeeTest
     {
 
         var employee = new Employee(
+                  TenantId,
                   " Tom ",
                   "EMP-12345"
               );
@@ -35,6 +39,7 @@ public class EmployeeTest
     {
 
         var employee = new Employee(
+                  TenantId,
                   "Tom",
                   " EMP-12345 "
               );
@@ -46,6 +51,7 @@ public class EmployeeTest
     {
 
         var employee = new Employee(
+                  TenantId,
                   "Tom",
                   "EMP-12345",
                   " Admin "
@@ -58,41 +64,41 @@ public class EmployeeTest
     {
 
         Assert.Throws<ArgumentException>(() =>
-            new Employee("", "EMP-12345"));
+            new Employee(TenantId, "", "EMP-12345"));
     }
     [Fact]
     public void Constructor_ThrowsArgumentException_WhenNameIsWhitespace()
     {
 
         Assert.Throws<ArgumentException>(() =>
-            new Employee("   ", "EMP-12345"));
+            new Employee(TenantId, "   ", "EMP-12345"));
     }
     [Fact]
     public void Constructor_ThrowsArgumentException_WhenBadgeBarcodeIsEmpty()
     {
 
         Assert.Throws<ArgumentException>(() =>
-            new Employee("Tom", ""));
+            new Employee(TenantId, "Tom", ""));
     }
     [Fact]
     public void Constructor_ThrowsArgumentException_WhenBadgeBarcodeIsWhitespace()
     {
 
         Assert.Throws<ArgumentException>(() =>
-            new Employee("Tom", "   "));
+            new Employee(TenantId, "Tom", "   "));
     }
     [Fact]
     public void Constructor_ThrowsArgumentException_RoleIsNull()
     {
 
         Assert.Throws<ArgumentException>(() =>
-            new Employee("Tom", "EMP-12345", null));
+            new Employee(TenantId, "Tom", "EMP-12345", null));
     }
     [Fact]
     public void Constructor_ThrowsArgumentException_RoleIsWhitespace()
     {
 
         Assert.Throws<ArgumentException>(() =>
-            new Employee("Tom", "EMP-12345", "   "));
+            new Employee(TenantId, "Tom", "EMP-12345", "   "));
     }
 }

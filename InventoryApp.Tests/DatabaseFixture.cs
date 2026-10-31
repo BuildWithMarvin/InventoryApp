@@ -16,14 +16,20 @@ public class DatabaseFixture : IAsyncLifetime
                 "ConnectionStrings__DefaultConnection has not been set.");
     }
 
-    public InventoryDbContext CreateContext()
+    // A context without a tenant sees no tenant data and can't write any; it can still
+    // manage the Tenants table itself.
+    public InventoryDbContext CreateContext(int? tenantId = null)
     {
         var options =
             new DbContextOptionsBuilder<InventoryDbContext>()
                 .UseSqlServer(_connectionString)
                 .Options;
 
-        return new InventoryDbContext(options);
+        var tenant = new TenantContext();
+        if (tenantId is int id)
+            tenant.Set(id);
+
+        return new InventoryDbContext(options, tenant);
     }
 
     public async Task InitializeAsync()

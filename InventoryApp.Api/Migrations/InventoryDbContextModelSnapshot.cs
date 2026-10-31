@@ -44,9 +44,12 @@ namespace InventoryApp.Api.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("BadgeBarcode")
+                    b.HasIndex("TenantId", "BadgeBarcode")
                         .IsUnique();
 
                     b.ToTable("Employees");
@@ -54,6 +57,9 @@ namespace InventoryApp.Api.Migrations
 
             modelBuilder.Entity("InventoryApp.Api.Models.Product", b =>
                 {
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<string>("InternalBarcode")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -82,9 +88,9 @@ namespace InventoryApp.Api.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.HasKey("InternalBarcode");
+                    b.HasKey("TenantId", "InternalBarcode");
 
-                    b.HasIndex("LastUpdatedByEmployeeId");
+                    b.HasIndex("TenantId", "LastUpdatedByEmployeeId");
 
                     b.ToTable("Products");
                 });
@@ -111,13 +117,16 @@ namespace InventoryApp.Api.Migrations
                     b.Property<int>("StorageLocationId")
                         .HasColumnType("int");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("LastUpdatedByEmployeeId");
+                    b.HasIndex("TenantId", "LastUpdatedByEmployeeId");
 
-                    b.HasIndex("StorageLocationId");
+                    b.HasIndex("TenantId", "StorageLocationId");
 
-                    b.HasIndex("ProductInternalBarcode", "StorageLocationId")
+                    b.HasIndex("TenantId", "ProductInternalBarcode", "StorageLocationId")
                         .IsUnique();
 
                     b.ToTable("ProductStocks");
@@ -142,44 +151,95 @@ namespace InventoryApp.Api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Zone")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Barcode")
+                    b.HasIndex("TenantId", "Barcode")
                         .IsUnique();
 
                     b.ToTable("StorageLocations");
                 });
 
+            modelBuilder.Entity("InventoryApp.Api.Models.Tenant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Tenants");
+                });
+
+            modelBuilder.Entity("InventoryApp.Api.Models.Employee", b =>
+                {
+                    b.HasOne("InventoryApp.Api.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("InventoryApp.Api.Models.Product", b =>
                 {
+                    b.HasOne("InventoryApp.Api.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("InventoryApp.Api.Models.Employee", "LastUpdatedBy")
                         .WithMany()
-                        .HasForeignKey("LastUpdatedByEmployeeId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("TenantId", "LastUpdatedByEmployeeId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("LastUpdatedBy");
                 });
 
             modelBuilder.Entity("InventoryApp.Api.Models.ProductStock", b =>
                 {
+                    b.HasOne("InventoryApp.Api.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("InventoryApp.Api.Models.Employee", "LastUpdatedBy")
                         .WithMany()
-                        .HasForeignKey("LastUpdatedByEmployeeId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("TenantId", "LastUpdatedByEmployeeId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("InventoryApp.Api.Models.Product", "Product")
                         .WithMany("Stocks")
-                        .HasForeignKey("ProductInternalBarcode")
+                        .HasForeignKey("TenantId", "ProductInternalBarcode")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("InventoryApp.Api.Models.StorageLocation", "StorageLocation")
                         .WithMany("Stocks")
-                        .HasForeignKey("StorageLocationId")
+                        .HasForeignKey("TenantId", "StorageLocationId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -188,6 +248,15 @@ namespace InventoryApp.Api.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("StorageLocation");
+                });
+
+            modelBuilder.Entity("InventoryApp.Api.Models.StorageLocation", b =>
+                {
+                    b.HasOne("InventoryApp.Api.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("InventoryApp.Api.Models.Product", b =>

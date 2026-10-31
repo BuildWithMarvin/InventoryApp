@@ -4,19 +4,24 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InventoryApp.Api.Models
 {
-    public class Product
+    public class Product : ITenantOwned
     {
 
         private Product() { }
 
 
         public Product(
-         
-         string internalBarcode,
+            int tenantId,
+            string internalBarcode,
             string name,
             int createdByEmployeeId,
     string? supplierBarcode = null)
         {
+            if (tenantId <= 0)
+                throw new ArgumentException("A tenant is required.", nameof(tenantId));
+
+            TenantId = tenantId;
+
             if (string.IsNullOrWhiteSpace(internalBarcode))
                 throw new ArgumentException(
                     "A barcode is required.",
@@ -34,7 +39,9 @@ namespace InventoryApp.Api.Models
                 ? null
                 : supplierBarcode.Trim();
         }
-        [Key]
+        // Part of the composite key (TenantId, InternalBarcode); see InventoryDbContext.
+        public int TenantId { get; private set; }
+
         [MaxLength(50)]
         public string InternalBarcode { get; private set; }
 
@@ -50,7 +57,6 @@ namespace InventoryApp.Api.Models
 
         public int? LastUpdatedByEmployeeId { get; private set; }
 
-        [ForeignKey(nameof(LastUpdatedByEmployeeId))]
         public Employee? LastUpdatedBy { get; private set; }
 
         public int TotalQuantity => Stocks?.Sum(s => s.Quantity) ?? 0;

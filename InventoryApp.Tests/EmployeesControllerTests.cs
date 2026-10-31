@@ -19,6 +19,7 @@ public class EmployeesControllerTests : IntegrationTestBase
         var controller = new EmployeesController(Context);
 
         var employee = new Employee(
+            TenantId,
             "Bob",
             "EMP-12345",
             "User");

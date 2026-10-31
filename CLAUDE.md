@@ -29,8 +29,11 @@ dotnet test ./InventoryApp.Tests --filter "Category=Integration"
 # Single test
 dotnet test ./InventoryApp.Tests --filter "FullyQualifiedName~ProductsControllerTests.GetProductByBarcode_ReturnsOk_WhenProductExists"
 
-# Add an EF Core migration
+# Add an EF Core migration (never runs Program.cs, see InventoryDbContextFactory)
 dotnet ef migrations add <Name> --project ./InventoryApp.Api
+
+# Apply migrations (always pass --connection; CD and the CI "Verify EF Core migrations" step do the same)
+dotnet ef database update --project ./InventoryApp.Api --connection "<connection string>"
 ```
 
 ### Integration test database
@@ -49,6 +52,7 @@ Rules for integration tests:
 - Put `[Trait("Category", "Integration")]` and `[Collection("Integration Tests")]` on each test class, not only on the base class. Don't add `IClassFixture<DatabaseFixture>`; the collection already provides the fixture.
 - Data is committed for real, so a second context, an HTTP call through `WebApplicationFactory`, or API code that opens its own transaction all see it. Classes in the collection still must not run in parallel, because the reset wipes the shared database.
 - Because of the reset, keys only need to be unique within a single test. Reusing a barcode across tests is fine.
+- `IntegrationTestBase` creates a tenant after each reset and exposes it as `Tenant`/`TenantId`; `Context` works for that tenant. For a second tenant use `CreateTenantAsync(name)` and `CreateContextFor(tenant)` (dispose the context), and `CreateContextWithoutTenant()` for a context that has none. Tenant-owned entities take the tenant id as their first constructor argument.
 - Never set `Id` on an `Employee` (or any other entity with an identity column). SQL Server assigns it and rejects explicit values. After `SaveChangesAsync()`, EF fills the generated ID into the entity, so use `employee.Id` directly instead of querying the row back.
 - A test that calls `UpdateProduct` must put the product's current `RowVersion` into the `UpdateProductRequest` (e.g. `originalProduct.RowVersion` after `SaveChangesAsync()`). Any other value makes the update match no row and return 409, which `UpdateProduct_ReturnsConflict_WhenRowVersionIsStale` relies on.
 
@@ -59,8 +63,10 @@ Rules for integration tests:
 - Controllers take `InventoryDbContext` directly. There's no service or repository layer, and tests construct controllers with `new ProductsController(context)`.
 - Controllers never bind or return entities. Request and response types are records in `Dtos/` (`CreateProductRequest`, `UpdateProductRequest`, `ProductDto`, `CreateEmployeeRequest`, `EmployeeDto`, `LoginRequest`), each response DTO with a static `FromEntity`. Controllers build entities through their constructors and mutation methods and turn the `ArgumentException`s they throw into 400. Write requests carry an `EmployeeId` because there is no authentication yet; the controller returns 400 if that employee doesn't exist.
 - `Program.cs` calls `db.Database.Migrate()` on startup. The CD pipeline also runs `dotnet ef database update` against Azure before it deploys.
+- `MultiTenantSchema` is a reset migration: it drops the single-tenant tables and creates the multi-tenant schema, with no `Down`. It was written for an Azure database without data worth keeping. `MigrationTests` apply it from an empty database and from both older schema states (with rows), and fail on model changes without a migration.
 - The domain models `Product` and `ProductStock` are rich entities. They have private setters, a private parameterless constructor for EF, a validating public constructor, and mutation methods (`UpdatePrice`, `AddStock`, `RemoveStock`, …) that enforce invariants and record `LastUpdatedByEmployeeId`. Change state through those methods rather than adding public setters. `Employee` and `StorageLocation` are plain POCOs.
-- `Product` is keyed by the string `InternalBarcode`, not an int `Id`. Stock quantities live in `ProductStock` rows, one per product and `StorageLocation` pair, with a unique index on that pair. `Product.TotalQuantity` is computed from `Stocks`.
+- **Multi-tenancy.** `Tenant` is the root. `Employee`, `Product`, `ProductStock` and `StorageLocation` implement `ITenantOwned` and carry a `TenantId`. Isolation is enforced twice: `InventoryDbContext` applies a query filter on the current tenant (no tenant set means no rows) and a `SaveChanges` guard that refuses writes for any other tenant; and the database rejects cross-tenant references because every key and foreign key includes `TenantId` (`Employee` and `StorageLocation` expose `(TenantId, Id)` as alternate key for this). The tenant comes from the scoped `TenantContext`, never from client input; use `_context.RequireTenantId()` when creating entities. Employee FKs use `NoAction`, so employees are deactivated, never deleted. Until Phase 3 of the multi-tenancy work nothing fills `TenantContext` in the running API, so tenant endpoints can't serve requests yet.
+- `Product` is keyed by `(TenantId, InternalBarcode)`; the same barcode may exist in several tenants. Routes still use only the barcode. Stock quantities live in `ProductStock` rows, one per product and `StorageLocation` pair, with a unique index on that pair. `Product.TotalQuantity` is computed from `Stocks`.
 - `Product.RowVersion` is a `[Timestamp]` concurrency token. `UpdateProduct` maps `DbUpdateConcurrencyException` to 409 Conflict, or to 404 if the product no longer exists.
 - Configuration: `appsettings.json` is gitignored. Copy it from `appsettings.example.json` (`ConnectionStrings:DefaultConnection`).
 

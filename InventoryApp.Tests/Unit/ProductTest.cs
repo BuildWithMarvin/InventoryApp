@@ -5,11 +5,14 @@ namespace InventoryApp.Tests.Unit
     [Trait("Category", "Unit")]
     public class ProductTests
     {
+        private const int TenantId = 1;
+
         [Fact]
         public void Constructor_CreatesProduct_WithValidData()
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1,
@@ -27,6 +30,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 " 12345678 ",
                 "Test product",
                 1
@@ -40,6 +44,7 @@ namespace InventoryApp.Tests.Unit
         public void Constructor_TrimsName()
         {
             var product = new Product(
+                TenantId,
                 "12345678",
                 "  Test product  ",
                 1);
@@ -52,7 +57,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             Assert.Throws<ArgumentException>(() =>
-                new Product("", "Test product", 1));
+                new Product(TenantId, "", "Test product", 1));
         }
 
         [Fact]
@@ -60,7 +65,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             Assert.Throws<ArgumentException>(() =>
-                new Product("   ", "Test product", 1));
+                new Product(TenantId, "   ", "Test product", 1));
         }
 
         [Fact]
@@ -68,7 +73,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             Assert.Throws<ArgumentException>(() =>
-                new Product("12345678", "", 1));
+                new Product(TenantId, "12345678", "", 1));
         }
 
         [Fact]
@@ -76,7 +81,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             Assert.Throws<ArgumentException>(() =>
-                new Product("12345678", "   ", 1));
+                new Product(TenantId, "12345678", "   ", 1));
         }
 
         [Fact]
@@ -84,6 +89,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1
@@ -101,6 +107,7 @@ namespace InventoryApp.Tests.Unit
         public void UpdateDetails_TrimsName()
         {
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Old name",
                 1);
@@ -115,6 +122,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1,
@@ -134,6 +142,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Old name",
                 1
@@ -157,6 +166,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Old name",
                 1
@@ -172,6 +182,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Old name",
                 1
@@ -187,6 +198,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1
@@ -205,6 +217,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1
@@ -223,6 +236,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1
@@ -238,6 +252,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1
@@ -253,6 +268,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1
@@ -268,6 +284,7 @@ namespace InventoryApp.Tests.Unit
         {
 
             var product = new Product(
+                TenantId,
                 "12345678",
                 "Test product",
                 1

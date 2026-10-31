@@ -49,8 +49,8 @@ namespace InventoryApp.Api.Controllers
             try
             {
                 newEmployee = request.Role == null
-                    ? new Employee(request.Name, request.BadgeBarcode)
-                    : new Employee(request.Name, request.BadgeBarcode, request.Role);
+                    ? new Employee(_context.RequireTenantId(), request.Name, request.BadgeBarcode)
+                    : new Employee(_context.RequireTenantId(), request.Name, request.BadgeBarcode, request.Role);
             }
             catch (ArgumentException ex)
             {

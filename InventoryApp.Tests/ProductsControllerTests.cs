@@ -21,6 +21,7 @@ public class ProductsControllerTests : IntegrationTestBase
 
         // Removed again by the database reset before the next test.
         _employee = new Employee(
+            TenantId,
             "Max-Mustermann",
              "EMP-123",
              "user");
@@ -35,6 +36,7 @@ public class ProductsControllerTests : IntegrationTestBase
         var controller = new ProductsController(Context);
 
         var product = new Product(
+            TenantId,
             "10000001",
             "Test product",
             _employee.Id
@@ -119,6 +121,7 @@ public class ProductsControllerTests : IntegrationTestBase
         var controller = new ProductsController(Context);
 
         var originalProduct = new Product(
+            TenantId,
             "10000004",
             "Old product",
             _employee.Id
@@ -144,7 +147,7 @@ public class ProductsControllerTests : IntegrationTestBase
 
         var productInDb =
             await Context.Products
-                .FindAsync("10000004");
+                .FindAsync(TenantId, "10000004");
 
         Assert.NotNull(productInDb);
 
@@ -178,6 +181,7 @@ public class ProductsControllerTests : IntegrationTestBase
         var controller = new ProductsController(Context);
 
         var product = new Product(
+            TenantId,
             "10000006",
             "Old product",
             _employee.Id

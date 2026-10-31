@@ -1,19 +1,23 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 
 namespace InventoryApp.Api.Models
 {
 
 
-    public class ProductStock
+    public class ProductStock : ITenantOwned
     {
         
         private ProductStock() { }
 
         
-        public ProductStock(string productInternalBarcode, int storageLocationId)
+        public ProductStock(int tenantId, string productInternalBarcode, int storageLocationId)
         {
+            if (tenantId <= 0)
+                throw new ArgumentException("A tenant is required.", nameof(tenantId));
+
+            TenantId = tenantId;
+
             if (string.IsNullOrWhiteSpace(productInternalBarcode))
                 throw new ArgumentException("Product barcode is required.", nameof(productInternalBarcode));
 
@@ -25,25 +29,23 @@ namespace InventoryApp.Api.Models
         [Key]
         public int Id { get; private set; }
 
+        public int TenantId { get; private set; }
+
         public int Quantity { get; private set; }
 
         public int? LastUpdatedByEmployeeId { get; private set; }
 
-        [ForeignKey(nameof(LastUpdatedByEmployeeId))]
         public Employee? LastUpdatedBy { get; private set; }
 
         [Required]
         [MaxLength(50)]
         public string ProductInternalBarcode { get; private set; }
 
-        [JsonIgnore] 
-        [ForeignKey(nameof(ProductInternalBarcode))]
         public Product? Product { get; private set; }
 
        
         public int StorageLocationId { get; private set; }
 
-        [ForeignKey(nameof(StorageLocationId))]
         public StorageLocation? StorageLocation { get; private set; }
 
         public void AddStock(int amount, int employeeId)

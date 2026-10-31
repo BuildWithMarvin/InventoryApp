@@ -4,13 +4,18 @@ using System.ComponentModel.DataAnnotations;
 
 namespace InventoryApp.Api.Models
 {
-    [Index(nameof(BadgeBarcode), IsUnique = true)]
-    public class Employee
+    [Index(nameof(TenantId), nameof(BadgeBarcode), IsUnique = true)]
+    public class Employee : ITenantOwned
     {
         private Employee() { }
 
-        public Employee(string name, string badgeBarcode, string role = "User")
+        public Employee(int tenantId, string name, string badgeBarcode, string role = "User")
         {
+            if (tenantId <= 0)
+                throw new ArgumentException("A tenant is required.", nameof(tenantId));
+
+            TenantId = tenantId;
+
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException(
                     "Name is required.",
@@ -49,6 +54,8 @@ namespace InventoryApp.Api.Models
         }
 
         public int Id { get; private set; }
+
+        public int TenantId { get; private set; }
 
         [Required]
         [MaxLength(100)]

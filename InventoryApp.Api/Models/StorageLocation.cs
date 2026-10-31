@@ -1,8 +1,10 @@
 ﻿namespace InventoryApp.Api.Models
 {
-    public class StorageLocation
+    public class StorageLocation : ITenantOwned
     {
         public int Id { get; set; }
+
+        public int TenantId { get; set; }
 
      
         public string LocationCode { get; set; } = string.Empty;

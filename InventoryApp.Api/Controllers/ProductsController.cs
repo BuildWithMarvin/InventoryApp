@@ -61,6 +61,7 @@ namespace InventoryApp.Api.Controllers
             try
             {
                 product = new Product(
+                    _context.RequireTenantId(),
                     request.InternalBarcode,
                     request.Name,
                     request.EmployeeId,
@@ -87,7 +88,8 @@ namespace InventoryApp.Api.Controllers
         [HttpPut("{internalBarcode}")]
         public async Task<IActionResult> UpdateProduct(string internalBarcode, UpdateProductRequest request)
         {
-            var product = await _context.Products.FindAsync(internalBarcode);
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.InternalBarcode == internalBarcode);
 
             if (product == null)
             {
