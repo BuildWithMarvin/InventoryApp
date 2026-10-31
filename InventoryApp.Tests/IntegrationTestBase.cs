@@ -53,7 +53,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     protected InventoryDbContext CreateContextWithoutTenant() =>
         _databaseFixture.CreateContext();
 
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         await Context.DisposeAsync();
     }

@@ -80,6 +80,10 @@ namespace InventoryApp.Api.Models
 
         public DateTimeOffset? LockoutEnd { get; private set; }
 
+        // Concurrent PIN failures must all be counted: a conflicting update is reloaded and retried.
+        [Timestamp]
+        public byte[] RowVersion { get; private set; } = null!;
+
         public void UpdateName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))

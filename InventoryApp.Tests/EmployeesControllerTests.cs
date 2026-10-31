@@ -15,51 +15,6 @@ public class EmployeesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Login_ReturnsOk_WhenBarcodeIsValid()
-    {
-        var controller = new EmployeesController(Context);
-
-        var employee = new Employee(
-            TenantId,
-            "Bob",
-            "EMP-12345");
-
-
-
-
-        Context.Employees.Add(employee);
-        await Context.SaveChangesAsync();
-
-        var loginRequest = new LoginRequest("EMP-12345");
-
-        var result =
-            await controller.Login(loginRequest);
-
-        var okResult =
-            Assert.IsType<OkObjectResult>(result.Result);
-
-        var returnedEmployee =
-            Assert.IsType<EmployeeDto>(okResult.Value);
-
-        Assert.Equal(
-            employee.Id,
-            returnedEmployee.Id);
-    }
-
-    [Fact]
-    public async Task Login_ReturnsUnauthorized_WhenBarcodeIsInvalid()
-    {
-        var controller = new EmployeesController(Context);
-
-        var loginRequest = new LoginRequest("WRONG-BARCODE");
-
-        var result =
-            await controller.Login(loginRequest);
-
-        Assert.IsType<UnauthorizedObjectResult>(result.Result);
-    }
-
-    [Fact]
     public async Task CreateEmployee_SavesToDatabase_AndReturnsOk()
     {
         var controller = new EmployeesController(Context);
@@ -78,9 +33,7 @@ public class EmployeesControllerTests : IntegrationTestBase
         var returnedEmployee =
             Assert.IsType<EmployeeDto>(okResult.Value);
 
-        Assert.Equal(
-            "MANAGER-999",
-            returnedEmployee.BadgeBarcode);
+        Assert.Equal("New manager", returnedEmployee.Name);
 
         Assert.Equal(
             new[] { DefaultRoles.WarehouseManager },
@@ -125,20 +78,5 @@ public class EmployeesControllerTests : IntegrationTestBase
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.False(await Context.Employees.AnyAsync());
-    }
-
-    [Fact]
-    public async Task Login_ReturnsUnauthorized_WhenEmployeeIsInactive()
-    {
-        var controller = new EmployeesController(Context);
-
-        var employee = new Employee(TenantId, "Bob", "EMP-12345");
-        employee.Deactivate();
-        Context.Employees.Add(employee);
-        await Context.SaveChangesAsync();
-
-        var result = await controller.Login(new LoginRequest("EMP-12345"));
-
-        Assert.IsType<UnauthorizedObjectResult>(result.Result);
     }
 }

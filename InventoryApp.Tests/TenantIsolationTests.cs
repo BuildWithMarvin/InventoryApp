@@ -140,7 +140,7 @@ public class TenantIsolationTests : IntegrationTestBase
     public async Task GetProductByBarcode_ReturnsNotFound_ForAProductOfAnotherTenant()
     {
         await SeedProductOfOtherTenantAsync("10000001");
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employeeA.Id);
 
         var result = await controller.GetProductByBarcode("10000001");
 
@@ -151,11 +151,11 @@ public class TenantIsolationTests : IntegrationTestBase
     public async Task UpdateProduct_ReturnsNotFound_ForAProductOfAnotherTenant()
     {
         var other = await SeedProductOfOtherTenantAsync("10000001");
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employeeA.Id);
 
         var result = await controller.UpdateProduct(
             "10000001",
-            new UpdateProductRequest("Hijacked", _employeeA.Id, other.RowVersion));
+            new UpdateProductRequest("Hijacked", other.RowVersion));
 
         Assert.IsType<NotFoundObjectResult>(result);
 
@@ -164,24 +164,24 @@ public class TenantIsolationTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task CreateProduct_RejectsAnEmployeeOfAnotherTenant()
+    public async Task CreateProduct_RecordsTheAuthenticatedEmployee()
     {
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employeeA.Id);
 
-        var result = await controller.CreateProduct(
-            new CreateProductRequest("10000001", "Product", _employeeB.Id));
+        var result = await controller.CreateProduct(new CreateProductRequest("10000001", "Product"));
 
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.Equal(_employeeA.Id, Assert.IsType<ProductDto>(created.Value).LastUpdatedByEmployeeId);
     }
 
     [Fact]
     public async Task CreateProduct_AllowsABarcodeUsedByAnotherTenant()
     {
         await SeedProductOfOtherTenantAsync("10000001");
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employeeA.Id);
 
         var result = await controller.CreateProduct(
-            new CreateProductRequest("10000001", "Product of A", _employeeA.Id));
+            new CreateProductRequest("10000001", "Product of A"));
 
         Assert.IsType<CreatedAtActionResult>(result.Result);
     }
@@ -192,22 +192,12 @@ public class TenantIsolationTests : IntegrationTestBase
         await SeedProductOfOtherTenantAsync("10000001");
         Context.Products.Add(new Product(TenantId, "10000002", "Product of A", _employeeA.Id));
         await Context.SaveChangesAsync();
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employeeA.Id);
 
         var result = await controller.GetProducts();
 
         var products = Assert.IsAssignableFrom<IEnumerable<ProductDto>>(result.Value);
         Assert.Equal("10000002", Assert.Single(products).InternalBarcode);
-    }
-
-    [Fact]
-    public async Task Login_DoesNotFindAnEmployeeOfAnotherTenant()
-    {
-        var controller = new EmployeesController(Context);
-
-        var result = await controller.Login(new LoginRequest("BADGE-B"));
-
-        Assert.IsType<UnauthorizedObjectResult>(result.Result);
     }
 
     // ---- The database enforces isolation on its own ----------------------------------

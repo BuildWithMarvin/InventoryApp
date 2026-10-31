@@ -21,6 +21,8 @@ namespace InventoryApp.Api.Data
         public DbSet<Role> Roles => Set<Role>();
         public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
         public DbSet<EmployeeRole> EmployeeRoles => Set<EmployeeRole>();
+        public DbSet<Device> Devices => Set<Device>();
+        public DbSet<EmployeeSession> EmployeeSessions => Set<EmployeeSession>();
 
         /// <summary>The tenant this context works for, or null if none has been set.</summary>
         public int? CurrentTenantId => _tenant.TenantId;
@@ -135,6 +137,56 @@ namespace InventoryApp.Api.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 employeeRole.HasQueryFilter(er => er.TenantId == CurrentTenantId);
+            });
+
+            modelBuilder.Entity<Device>(device =>
+            {
+                device.HasAlternateKey(d => new { d.TenantId, d.Id });
+
+                // Global on purpose: the device code is what tells the login which tenant it is for.
+                device.HasIndex(d => d.DeviceCode)
+                    .IsUnique();
+
+                device.HasIndex(d => d.EnrollmentCodeHash)
+                    .IsUnique()
+                    .HasFilter("[EnrollmentCodeHash] IS NOT NULL");
+
+                device.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(d => d.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                device.HasQueryFilter(d => d.TenantId == CurrentTenantId);
+            });
+
+            modelBuilder.Entity<EmployeeSession>(session =>
+            {
+                session.HasKey(s => s.Id);
+                session.Property(s => s.Id).ValueGeneratedNever();
+
+                session.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(s => s.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                session.HasOne(s => s.Employee)
+                    .WithMany()
+                    .HasForeignKey(s => new { s.TenantId, s.EmployeeId })
+                    .HasPrincipalKey(e => new { e.TenantId, e.Id })
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                session.HasOne(s => s.Device)
+                    .WithMany()
+                    .HasForeignKey(s => new { s.TenantId, s.DeviceId })
+                    .HasPrincipalKey(d => new { d.TenantId, d.Id })
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // One active session per device: a new login must revoke the previous one first.
+                session.HasIndex(s => s.DeviceId)
+                    .IsUnique()
+                    .HasFilter("[RevokedAt] IS NULL");
+
+                session.HasQueryFilter(s => s.TenantId == CurrentTenantId);
             });
 
             modelBuilder.Entity<Product>(product =>

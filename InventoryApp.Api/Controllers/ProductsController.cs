@@ -3,6 +3,8 @@ using InventoryApp.Api.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using InventoryApp.Api.Models;
+using InventoryApp.Api.Security;
+using Microsoft.AspNetCore.Authorization;
 
 namespace InventoryApp.Api.Controllers
 {
@@ -18,6 +20,7 @@ namespace InventoryApp.Api.Controllers
         }
 
         [HttpGet("{internalBarcode}")]
+        [Authorize(Policy = Permissions.ProductsRead)]
         public async Task<ActionResult<ProductDto>> GetProductByBarcode(string internalBarcode)
         {
             var product = await _context.Products
@@ -33,6 +36,7 @@ namespace InventoryApp.Api.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Permissions.ProductsRead)]
         public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
             // Note: For future scaling (e.g., > 50,000 items), consider implementing pagination (Skip/Take).
@@ -44,6 +48,7 @@ namespace InventoryApp.Api.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = Permissions.ProductsWrite)]
         public async Task<ActionResult<ProductDto>> CreateProduct(CreateProductRequest request)
         {
             if (await ProductExistsAsync(request.InternalBarcode))
@@ -51,10 +56,7 @@ namespace InventoryApp.Api.Controllers
                 return Conflict("Barcode already assigned.");
             }
 
-            if (!await EmployeeExistsAsync(request.EmployeeId))
-            {
-                return BadRequest($"Employee {request.EmployeeId} not found.");
-            }
+            var employeeId = User.GetEmployeeId();
 
             Product product;
 
@@ -64,11 +66,11 @@ namespace InventoryApp.Api.Controllers
                     _context.RequireTenantId(),
                     request.InternalBarcode,
                     request.Name,
-                    request.EmployeeId,
+                    employeeId,
                     request.SupplierBarcode);
 
-                product.UpdateDetails(product.Name, request.Description, request.EmployeeId);
-                product.UpdatePrice(request.Price, request.EmployeeId);
+                product.UpdateDetails(product.Name, request.Description, employeeId);
+                product.UpdatePrice(request.Price, employeeId);
             }
             catch (ArgumentException ex)
             {
@@ -86,6 +88,7 @@ namespace InventoryApp.Api.Controllers
         }
 
         [HttpPut("{internalBarcode}")]
+        [Authorize(Policy = Permissions.ProductsWrite)]
         public async Task<IActionResult> UpdateProduct(string internalBarcode, UpdateProductRequest request)
         {
             var product = await _context.Products
@@ -96,19 +99,16 @@ namespace InventoryApp.Api.Controllers
                 return NotFound($"Product with Barcode {internalBarcode} not found.");
             }
 
-            if (!await EmployeeExistsAsync(request.EmployeeId))
-            {
-                return BadRequest($"Employee {request.EmployeeId} not found.");
-            }
+            var employeeId = User.GetEmployeeId();
 
             // Compare against the version the client read, not the one just loaded.
             _context.Entry(product).Property(p => p.RowVersion).OriginalValue = request.RowVersion;
 
             try
             {
-                product.UpdateDetails(request.Name, request.Description, request.EmployeeId);
-                product.UpdateSupplierBarcode(request.SupplierBarcode, request.EmployeeId);
-                product.UpdatePrice(request.Price, request.EmployeeId);
+                product.UpdateDetails(request.Name, request.Description, employeeId);
+                product.UpdateSupplierBarcode(request.SupplierBarcode, employeeId);
+                product.UpdatePrice(request.Price, employeeId);
             }
             catch (ArgumentException ex)
             {
@@ -137,11 +137,6 @@ namespace InventoryApp.Api.Controllers
         private Task<bool> ProductExistsAsync(string internalBarcode)
         {
             return _context.Products.AnyAsync(e => e.InternalBarcode == internalBarcode);
-        }
-
-        private Task<bool> EmployeeExistsAsync(int employeeId)
-        {
-            return _context.Employees.AnyAsync(e => e.Id == employeeId);
         }
     }
 }

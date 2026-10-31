@@ -22,6 +22,62 @@ namespace InventoryApp.Api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("InventoryApp.Api.Models.Device", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CredentialHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DeviceCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset?>("EnrolledAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("EnrollmentCodeExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("EnrollmentCodeHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceCode")
+                        .IsUnique();
+
+                    b.HasIndex("EnrollmentCodeHash")
+                        .IsUnique()
+                        .HasFilter("[EnrollmentCodeHash] IS NOT NULL");
+
+                    b.ToTable("Devices");
+                });
+
             modelBuilder.Entity("InventoryApp.Api.Models.Employee", b =>
                 {
                     b.Property<int>("Id")
@@ -55,6 +111,12 @@ namespace InventoryApp.Api.Migrations
                     b.Property<string>("PinHash")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -91,6 +153,49 @@ namespace InventoryApp.Api.Migrations
                         {
                             t.HasCheckConstraint("CK_EmployeeRoles_InventoryRoleOnly", "[RoleScope] = 0");
                         });
+                });
+
+            modelBuilder.Entity("InventoryApp.Api.Models.EmployeeSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("DeviceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RevokedReason")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId")
+                        .IsUnique()
+                        .HasFilter("[RevokedAt] IS NULL");
+
+                    b.HasIndex("TenantId", "DeviceId");
+
+                    b.HasIndex("TenantId", "EmployeeId");
+
+                    b.ToTable("EmployeeSessions");
                 });
 
             modelBuilder.Entity("InventoryApp.Api.Models.Product", b =>
@@ -280,6 +385,15 @@ namespace InventoryApp.Api.Migrations
                     b.ToTable("Tenants");
                 });
 
+            modelBuilder.Entity("InventoryApp.Api.Models.Device", b =>
+                {
+                    b.HasOne("InventoryApp.Api.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("InventoryApp.Api.Models.Employee", b =>
                 {
                     b.HasOne("InventoryApp.Api.Models.Tenant", null)
@@ -314,6 +428,33 @@ namespace InventoryApp.Api.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("InventoryApp.Api.Models.EmployeeSession", b =>
+                {
+                    b.HasOne("InventoryApp.Api.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryApp.Api.Models.Device", "Device")
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryApp.Api.Models.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EmployeeId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Device");
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("InventoryApp.Api.Models.Product", b =>

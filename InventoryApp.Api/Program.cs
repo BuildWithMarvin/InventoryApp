@@ -1,12 +1,13 @@
 using InventoryApp.Api.Data;
+using InventoryApp.Api.Security;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// Injected wherever time matters (session expiry), so tests can control the clock.
-builder.Services.AddSingleton(TimeProvider.System);
+// Authentication, authorization, rate limiting and the clock (TimeProvider) used for session expiry.
+builder.Services.AddInventorySecurity(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -34,7 +35,10 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
+app.UseRateLimiter();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

@@ -2,6 +2,7 @@
 using InventoryApp.Api.Dtos;
 using InventoryApp.Api.Models;
 using InventoryApp.Api.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,29 +21,9 @@ namespace InventoryApp.Api.Controllers
         }
 
 
-        [HttpPost("login")]
-        public async Task<ActionResult<EmployeeDto>> Login([FromBody] LoginRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.BadgeBarcode))
-            {
-                return BadRequest("The barcode field cannot be left blank.");
-            }
-
-
-            var employee = await _context.Employees
-                .Include(e => e.EmployeeRoles).ThenInclude(er => er.Role)
-                .FirstOrDefaultAsync(e => e.BadgeBarcode == request.BadgeBarcode && e.IsActive);
-
-            if (employee == null)
-            {
-
-                return Unauthorized("Invalid employee ID card.");
-            }
-
-            return Ok(EmployeeDto.FromEntity(employee));
-        }
-
-
+        // Creating employees is an administrator operation (Entra ID, Phase 4). Until that exists the
+        // policy denies everyone: badge logins can never hold the permission to do this.
+        [Authorize(Policy = Policies.AdminOnly)]
         [HttpPost]
         public async Task<ActionResult<EmployeeDto>> CreateEmployee([FromBody] CreateEmployeeRequest request)
         {

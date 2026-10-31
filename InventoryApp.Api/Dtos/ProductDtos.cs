@@ -33,10 +33,10 @@ namespace InventoryApp.Api.Dtos
                 product.Stocks.Select(ProductStockDto.FromEntity).ToList());
     }
 
+    // Who changed a product is never part of a request: it is the employee of the session.
     public record CreateProductRequest(
         [Required, MaxLength(50)] string InternalBarcode,
         [Required] string Name,
-        int EmployeeId,
         [MaxLength(50)] string? SupplierBarcode = null,
         string? Description = null,
         decimal Price = 0);
@@ -44,7 +44,6 @@ namespace InventoryApp.Api.Dtos
     // The barcode comes from the route; RowVersion is the value the client last read.
     public record UpdateProductRequest(
         [Required] string Name,
-        int EmployeeId,
         [Required] byte[] RowVersion,
         [MaxLength(50)] string? SupplierBarcode = null,
         string? Description = null,

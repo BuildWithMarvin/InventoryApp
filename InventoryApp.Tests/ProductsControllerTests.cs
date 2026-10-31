@@ -32,14 +32,13 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task GetProductByBarcode_ReturnsOk_WhenProductExists()
     {
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employee.Id);
 
         var product = new Product(
             TenantId,
             "10000001",
             "Test product",
-            _employee.Id
-        );
+            _employee.Id);
 
         Context.Products.Add(product);
         await Context.SaveChangesAsync();
@@ -62,7 +61,7 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task GetProductByBarcode_ReturnsNotFound_WhenBarcodeDoesNotExist()
     {
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employee.Id);
 
         var result =
             await controller.GetProductByBarcode("10000002");
@@ -73,13 +72,11 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task CreateProduct_SavesToDatabase_AndReturnsCreatedAtAction()
     {
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employee.Id);
 
         var newProduct = new CreateProductRequest(
             "10000003",
-            "Test product",
-            _employee.Id
-        );
+            "Test product");
 
         var result =
             await controller.CreateProduct(newProduct);
@@ -117,7 +114,7 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task UpdateProduct_ChangesData_AndReturnsNoContent()
     {
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employee.Id);
 
         var originalProduct = new Product(
             TenantId,
@@ -133,7 +130,6 @@ public class ProductsControllerTests : IntegrationTestBase
 
         var updatedProduct = new UpdateProductRequest(
             "New product",
-            _employee.Id,
             originalProduct.RowVersion
         );
 
@@ -158,11 +154,10 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task UpdateProduct_ReturnsNotFound_WhenProductDoesNotExist()
     {
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employee.Id);
 
         var nonExistentProduct = new UpdateProductRequest(
             "Phantom product",
-            _employee.Id,
             new byte[8]
         );
 
@@ -177,7 +172,7 @@ public class ProductsControllerTests : IntegrationTestBase
     [Fact]
     public async Task UpdateProduct_ReturnsConflict_WhenRowVersionIsStale()
     {
-        var controller = new ProductsController(Context);
+        var controller = new ProductsController(Context).AsEmployee(_employee.Id);
 
         var product = new Product(
             TenantId,
@@ -193,7 +188,6 @@ public class ProductsControllerTests : IntegrationTestBase
 
         var staleUpdate = new UpdateProductRequest(
             "New product",
-            _employee.Id,
             new byte[8]
         );
 
