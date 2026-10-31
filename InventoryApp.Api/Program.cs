@@ -5,6 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+// Injected wherever time matters (session expiry), so tests can control the clock.
+builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -34,3 +36,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Makes the entry point visible to WebApplicationFactory<Program> in the test project.
+public partial class Program { }
