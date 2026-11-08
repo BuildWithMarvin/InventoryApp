@@ -1,6 +1,6 @@
 # InventoryApp: multi-tenancy and security refactor, project context
 
-Last updated: 2026-11-08, after Phase 4a (Entra authentication and administrator authorization; uncommitted when written). Phase 3 is commit `f0d071d`.
+Last updated: 2026-11-08, after Phase 4a (Entra authentication and administrator authorization, commit `3ad849e`). Phase 3 is commit `f0d071d`.
 Purpose: a standalone starting context for a new Claude Code session. Read this first, then `CLAUDE.md` (conventions, commands, test rules). `CLAUDE.md` describes how the code works today; this file records **why**, what was **decided by whom**, and **what is left**.
 
 ## How to read this document
@@ -24,6 +24,7 @@ Proof-of-concept inventory system: ASP.NET Core Web API (`net10.0`, EF Core, SQL
 - **Commit locally at the end of each phase** (explicitly confirmed). **Never push or merge without the user's approval.** The user asked for pushes explicitly after Phases 1, 2 and 3; do not assume standing permission.
 - Do not invent decisions or silently resolve open questions (this document's own rule).
 - Preserve existing functionality where possible; avoid unnecessary abstractions and overengineering.
+- **Keep this document in step with the code.** After every phase or significant task, review and update it so it shows the *verified* state, not the intended one: only implemented functionality is marked done; decisions, implementation, test verification and open issues are kept apart; tests are recorded as *existing*, *executed* (with result and environment) or neither, never as passing because they exist; an open issue is removed only after the implementation or decision is verified complete; confirmed decisions and their rationale are preserved, not silently changed; anything that could not be verified (Azure, GitHub Actions, production) is said so; the completion report ends with a short summary of the documentation changes. Documentation maintenance never changes decisions, deploys, resets databases, merges or pushes.
 - Commit messages end with the attribution line `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` (from the session's configuration).
 
 ## 3. Original requirements (CONFIRMED)
@@ -57,7 +58,7 @@ Proof-of-concept inventory system: ASP.NET Core Web API (`net10.0`, EF Core, SQL
 | D12 | Every new tenant gets three default roles: **TenantAdmin** (full administrative control of the tenant: employee management, role assignments, permissions, tenant settings), **WarehouseManager** (manages products, storage locations, inventory, stock adjustments; cannot manage employees, roles or permissions), **WarehouseEmployee** (day-to-day warehouse operations according to assigned permissions). **Only TenantAdmin may manage employees, roles and permissions.** PlatformAdmin is a separate platform-wide role. |
 | D13 | Do not manually delete or reset the Azure database. Assess whether the migration history needs re-baselining; prefer a controlled, migration-based approach. If a manual Azure operation ever becomes absolutely necessary, explain why and wait for approval. |
 | D14 | Branching: `refactor/use-dtos` was to be inspected and verified (done: DTOs complete, tests pass), then **the user** merges it into `main`, then a new feature branch is created from the updated `main`. Nothing is merged or pushed without approval. (See A12 and O1 for what actually happened.) |
-| D15 | Swagger is disabled in Production and enabled in Development. It never replaces authentication and authorization. **Not yet implemented** (planned for Phase 4). |
+| D15 | Swagger is disabled in Production and enabled in Development. It never replaces authentication and authorization. **Not yet implemented** (planned for Phase 4b). |
 | D16 | The MAUI client is legacy; keep the API frontend-agnostic; ask before assuming the React stack or location. |
 | D17 | Two separate authentication schemes: `EmployeeJwt` (badge and PIN) and `Entra` (Platform Admins and Tenant Admins). An employee token never grants admin access and an Entra token never grants employee access. (Stated by the user for Phase 4a; the former scheme name `Employee` was renamed.) |
 | D18 | TenantAdmin authorization is "Option 2": a database mapping links the Entra identity to one tenant and references the existing Admin-scope `TenantAdmin` role; admin permissions come from the existing permission catalog and role-permission rows; the mapping has `IsActive`, which is checked on every request. The identity key is `(tid, oid)`, never `sub`. Platform Admin has a separate, explicit permission set and never reaches inventory data (D8), enforced technically. |
@@ -68,8 +69,8 @@ Claude made or proposed these; the user said to use best practices and proceed. 
 
 | # | Assumption | Impl. |
 |---|---|---|
-| A1 | The `TenantAdmin` role has **admin scope** and is held by Entra identities only, never by badge employees. Admin-scope permissions are never usable with a badge login. It holds all admin permissions and no inventory permissions. | Role and DB constraints: yes. Entra side: no |
-| A2 | Reading of D8 against D12: a Platform Admin may manage employees (including role assignment and PIN reset) but may **not** edit role definitions or permissions (only a TenantAdmin may). | No (Phase 4) |
+| A1 | The `TenantAdmin` role has **admin scope** and is held by Entra identities only, never by badge employees. Admin-scope permissions are never usable with a badge login. It holds all admin permissions and no inventory permissions. | Role and DB constraints: yes. Entra side: yes since Phase 4a (the `TenantAdmin` mapping references the role; executed tests only with a locally signed token, O5) |
+| A2 | Reading of D8 against D12: a Platform Admin may manage employees (including role assignment and PIN reset) but may **not** edit role definitions or permissions (only a TenantAdmin may). | Partly: `PlatformPermissions` has no role-definition permission (tested); the employee-management endpoints do not exist yet (4b) |
 | A3 | Device authentication for a browser PDA: the device credential is a server-issued random 256-bit token delivered **only as an HttpOnly, Secure, SameSite=Strict cookie** (`inv_device`, Path `/api/auth`, 400 days). Only its SHA-256 is stored. Enrollment is a one-time 130-bit code (24 h) redeemed at `POST /api/auth/enroll`. | Yes |
 | A4 | **The React app and the API are served from the same site** (preferably same origin), because A3 needs it; this also removes the need for CORS. | Not decided. See O2 |
 | A5 | The employee access token is kept **in memory only** by the client (a page reload means scanning the badge again). | Client does not exist |
@@ -83,7 +84,7 @@ Claude made or proposed these; the user said to use best practices and proceed. 
 | A13 | One feature branch (`ft/multi-tenancy`) with one commit per phase; merged to `main` only at the end. | Yes |
 | A14 | Migration strategy: keep the existing migration history (no re-baseline, no squash) and add one explicit **reset migration** (`MultiTenantSchema`) that drops the four old tables and creates the new schema; `Down` is deliberately unsupported; no row-count guard. Later phases add normal additive migrations. No manual Azure operation is needed. | Yes |
 | A15 | Employees are deactivated, never deleted (composite FKs to `Employee` use `NoAction`, because SQL Server cannot null one column of a composite FK). A role that is in use cannot be deleted. | Yes |
-| A16 | Planned Entra design (Phase 4/5): Entra app roles `Platform.Admin` and `Tenant.Admin`; a `TenantAdmin` table `(TenantId, EntraObjectId, ...)` links a Tenant Admin to a tenant; admin endpoints under `/api/admin`; for tenant-scoped admin routes the route's tenant id is a *selector* that is authorized first and only then bound to `TenantContext`; enabling `RequirePin` is rejected while active employees lack a PIN; the first Platform Admin is assigned in the Entra portal (no database seed). | No |
+| A16 | Planned Entra design (Phase 4/5): Entra app roles `Platform.Admin` and `Tenant.Admin`; a `TenantAdmin` table `(TenantId, EntraObjectId, ...)` links a Tenant Admin to a tenant; admin endpoints under `/api/admin`; for tenant-scoped admin routes the route's tenant id is a *selector* that is authorized first and only then bound to `TenantContext`; enabling `RequirePin` is rejected while active employees lack a PIN; the first Platform Admin is assigned in the Entra portal (no database seed). | Partly: scheme, mapping table, `/api/admin` read endpoints, Platform Admin via app role (4a; the `Tenant.Admin` app role is not used, see A18). Not yet: management endpoints, route-tenant selector, `RequirePin` guard (4b) |
 | A17 | `POST /api/employees` is guarded by the placeholder policy `AdminOnly` (denies everyone) until the Entra scheme exists, so employee creation is currently unreachable over HTTP. | Yes (temporary) |
 | A18 | **Phase 4a choices.** (a) A Platform Admin is a validated token carrying the app role `Entra:PlatformAdminRole` (default `Platform.Admin`); there is no database row, so removing the app role in Entra applies when the token expires (about an hour). A Tenant Admin never relies on a claim: the mapping row is the only authority, so the `Tenant.Admin` app role is **not** required. (b) The token must carry the delegated scope `Entra:RequiredScope` (default `access_as_user`), which rejects app-only tokens. (c) Invalid token, wrong directory or malformed `tid`/`oid` is 401; a valid Entra user without an active mapping or tenant is signed in but unauthorized, 403; a database failure is 503 with `Retry-After`. (d) D8 is enforced with `TenantContext.RestrictToAdministration()` plus `IInventoryData` query filters and a write guard, not with a second DbContext (two contexts would make every `dotnet ef` command ambiguous without `--context`, including the CI/CD ones). (e) With no `Entra` settings the app starts and rejects every Entra token; partial or malformed settings stop startup. | Yes |
 | A19 | Platform permissions (`PlatformPermissions`): `Tenants.Read`, `Tenants.Manage`, `Devices.Manage`, `Employees.Manage`, `Sessions.Revoke` (all `Platform.`-prefixed). No inventory and no role-definition permission (A2). Tenant Admin permissions are the Admin-scope catalog. | Yes |
@@ -164,10 +165,10 @@ Permission catalog (`Security/Permissions.cs`). **Inventory scope** (badge emplo
 | Session expiry and immediate revocation | Implemented (per-request database check). |
 | PIN brute-force protection | Implemented (lockout, concurrency-safe counter, rate limit); residual risk in O10. |
 | PIN hashing | Implemented (BCrypt). |
-| All protected endpoints enforce authorization | Implemented for the employee scheme (policies, fallback, guardrail test); admin scheme pending. |
+| All protected endpoints enforce authorization | Implemented for both schemes (employee policies and fallback, administrator policies, guardrail tests). Executed locally at `3ad849e`; GitHub Actions never verified (O3). |
 | No IDOR / cross-tenant access | Implemented at query, write and database-constraint level; tests cover each. |
-| Entra ID for privileged operations | **Pending (Phase 4).** |
-| Swagger off in Production | **Pending (Phase 4).** |
+| Entra ID for privileged operations | **Partly implemented (4a):** token validation, mapping, policies, read-only endpoints; executed locally only with a locally signed token. Management endpoints (4b) and a real Entra app registration (O5) are missing; employee creation is still closed. |
+| Swagger off in Production | **Not implemented (4b).** Swagger is enabled in every environment. |
 
 ## 10. Database and migration strategy
 
@@ -178,7 +179,7 @@ Permission catalog (`Security/Permissions.cs`). **Inventory scope** (badge emplo
 
 ## 11. Testing strategy and environment
 
-- **313 tests** at `3ad849e` (223 at `f0d071d`), all passing. Phase 4a added 90, including Entra token validation, mapping, policies, the D8 probes and database failure (`EntraAuthenticationTests`, `AdminAuthorizationTests`, `TenantAdminPersistenceTests`, `Unit/TenantAdminTests`, `Unit/EntraOptionsTests`). Mutation checks confirmed that tests fail when session revocation, the device-cookie check, the PIN-failure retry or an `[Authorize]` attribute is removed; for Phase 4a also when `RestrictToAdministration`, the mapping `IsActive` check, the `tid` check, the claim stripping, the inventory read filter, the inventory write guard or the scope check is removed.
+- **313 tests** exist at `3ad849e` (223 at `f0d071d`). **Executed** locally on 2026-11-08 against SQL Server 2019 in Docker: all 313 passed (the 223 before Phase 4a were also run first as a baseline). **Not executed:** on GitHub Actions (SQL Server 2022; O3), against Azure SQL, or against a real Entra directory. Phase 4a added 90, including Entra token validation, mapping, policies, the D8 probes and database failure (`EntraAuthenticationTests`, `AdminAuthorizationTests`, `TenantAdminPersistenceTests`, `Unit/TenantAdminTests`, `Unit/EntraOptionsTests`). Mutation checks confirmed that tests fail when session revocation, the device-cookie check, the PIN-failure retry or an `[Authorize]` attribute is removed; for Phase 4a also when `RestrictToAdministration`, the mapping `IsActive` check, the `tid` check, the claim stripping, the inventory read filter, the inventory write guard or the scope check is removed.
 - Layers: unit tests (domain, hashing, credentials, guardrail); direct controller tests (`.AsEmployee(id)` supplies the user); tenant-isolation tests (queries, write guard, controllers, raw SQL against database constraints, each with a positive control); HTTP tests through the real pipeline (`ApiTestBase`, `ApiFactory`, `FakeTimeProvider`) for enrollment, login, PIN, sessions, forged tokens, authorization, rate limits.
 - Integration tests need SQL Server: local Docker container `mssql_db` (SQL Server 2019, `localhost,1433`; start it with `docker start mssql_db`); connection comes from `InventoryApp.Tests/local.runsettings` (gitignored; **never print its password**). CI uses SQL Server 2022.
 - `dotnet-ef`: the global tool on this machine is an 11.0 preview; CD pins 10.0.11. Use 10.0.11, e.g. `dotnet tool install dotnet-ef --version 10.0.11 --tool-path <dir>`.
@@ -200,7 +201,7 @@ Permission catalog (`Security/Permissions.cs`). **Inventory scope** (badge emplo
 | 1 | Tenant schema, composite keys/FKs, query filters, write guard, design-time factory, reset migration, migration tests, CI migration step | Done (`b6c4ca0`) |
 | 2 | Permission catalog, roles, default roles, `EmployeeRole` DB constraints, PIN hashing and lockout logic, `RequirePin`, `IsActive` | Done (`afc57f1`) |
 | 3 | Devices, enrollment cookie, sessions, login/logout/change-pin, JWT with per-request validation, policies and fallback, rate limiting, DTO changes, HTTP tests, guardrail test | Done (`f0d071d`) |
-| 4a | Entra scheme, `TenantAdmin` mapping, administrator policies, D8 restriction, tests | **Done locally, uncommitted** |
+| 4a | Entra scheme, `TenantAdmin` mapping, administrator policies, D8 restriction, tests | **Done, committed locally (`3ad849e`), not pushed.** Executed locally only: 313 tests passed on SQL Server 2019. CI and Azure unverified. |
 | 4b | Administration endpoints (tenants, devices, employees, roles, sessions), Swagger only in Development | **Not started** |
 | 5 | Deployment hardening and merge (below) | **Not started** |
 
@@ -226,9 +227,9 @@ The React frontend, MAUI changes, new storage-location/stock endpoints (O9).
 ## 14. Where things are
 
 - Entities: `InventoryApp.Api/Models/`. DbContext, mapping, filters, guard, `TenantContext`, design-time factory: `InventoryApp.Api/Data/`.
-- Security: `InventoryApp.Api/Security/` (`Permissions`, `DefaultRoles`, `PinHasher`, `DeviceCredentials`, `EmployeeAuthentication` for scheme/policies/rate limits/session validation, `JwtTokenService`, `AuthOptions`, `InventoryClaims`, `Policies`).
-- Controllers: `AuthController`, `ProductsController`, `EmployeesController`. DTOs: `Dtos/`.
-- Tests: `ApiFactory`, `ApiTestBase`, `IntegrationTestBase`, `DatabaseFixture`; HTTP tests in `LoginTests`, `SessionTests`, `DeviceEnrollmentTests`, `ChangePinTests`, `AuthorizationHttpTests`, `RateLimitTests`; isolation and schema tests in `TenantIsolationTests`, `RolesAndPinsTests`, `MigrationTests`; `Unit/` for domain and guardrail tests.
+- Security: `InventoryApp.Api/Security/` (`Permissions`, `DefaultRoles`, `PinHasher`, `DeviceCredentials`, `EmployeeAuthentication` for scheme/policies/rate limits/session validation, `JwtTokenService`, `AuthOptions`, `InventoryClaims`, `Policies`; Phase 4a: `EntraAuthentication`, `EntraOptions`, `AdminPolicies`, `PlatformPermissions`). `Models/TenantAdmin.cs` is the Entra mapping.
+- Controllers: `AuthController`, `ProductsController`, `EmployeesController`, `AdminController` (`api/admin`), `PlatformController` (`api/platform`). DTOs: `Dtos/`.
+- Tests: `ApiFactory`, `ApiTestBase`, `IntegrationTestBase`, `DatabaseFixture`; HTTP tests in `LoginTests`, `SessionTests`, `DeviceEnrollmentTests`, `ChangePinTests`, `AuthorizationHttpTests`, `RateLimitTests`; isolation and schema tests in `TenantIsolationTests`, `RolesAndPinsTests`, `MigrationTests`; Phase 4a: `EntraAuthenticationTests`, `AdminAuthorizationTests`, `TenantAdminPersistenceTests` (helpers `EntraTestBase`, `EntraTestTokens`, test-only `InventoryProbeController`); `Unit/` for domain and guardrail tests.
 - CI/CD: `.github/workflows/backend-pipeline.yml` (build, migration rehearsal, tests; deploy only on `main`).
 
 ## 15. Starting a new session
