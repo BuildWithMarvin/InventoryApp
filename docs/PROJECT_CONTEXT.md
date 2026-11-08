@@ -1,6 +1,6 @@
 # InventoryApp: multi-tenancy and security refactor, project context
 
-Last updated: 2026-10-31, after Phase 3 (commit `f0d071d`).
+Last updated: 2026-11-08, after Phase 4a (Entra authentication and administrator authorization; uncommitted when written). Phase 3 is commit `f0d071d`.
 Purpose: a standalone starting context for a new Claude Code session. Read this first, then `CLAUDE.md` (conventions, commands, test rules). `CLAUDE.md` describes how the code works today; this file records **why**, what was **decided by whom**, and **what is left**.
 
 ## How to read this document
@@ -59,6 +59,8 @@ Proof-of-concept inventory system: ASP.NET Core Web API (`net10.0`, EF Core, SQL
 | D14 | Branching: `refactor/use-dtos` was to be inspected and verified (done: DTOs complete, tests pass), then **the user** merges it into `main`, then a new feature branch is created from the updated `main`. Nothing is merged or pushed without approval. (See A12 and O1 for what actually happened.) |
 | D15 | Swagger is disabled in Production and enabled in Development. It never replaces authentication and authorization. **Not yet implemented** (planned for Phase 4). |
 | D16 | The MAUI client is legacy; keep the API frontend-agnostic; ask before assuming the React stack or location. |
+| D17 | Two separate authentication schemes: `EmployeeJwt` (badge and PIN) and `Entra` (Platform Admins and Tenant Admins). An employee token never grants admin access and an Entra token never grants employee access. (Stated by the user for Phase 4a; the former scheme name `Employee` was renamed.) |
+| D18 | TenantAdmin authorization is "Option 2": a database mapping links the Entra identity to one tenant and references the existing Admin-scope `TenantAdmin` role; admin permissions come from the existing permission catalog and role-permission rows; the mapping has `IsActive`, which is checked on every request. The identity key is `(tid, oid)`, never `sub`. Platform Admin has a separate, explicit permission set and never reaches inventory data (D8), enforced technically. |
 
 ## 5. Assumptions adopted under delegation (ASSUMPTION)
 
@@ -83,6 +85,9 @@ Claude made or proposed these; the user said to use best practices and proceed. 
 | A15 | Employees are deactivated, never deleted (composite FKs to `Employee` use `NoAction`, because SQL Server cannot null one column of a composite FK). A role that is in use cannot be deleted. | Yes |
 | A16 | Planned Entra design (Phase 4/5): Entra app roles `Platform.Admin` and `Tenant.Admin`; a `TenantAdmin` table `(TenantId, EntraObjectId, ...)` links a Tenant Admin to a tenant; admin endpoints under `/api/admin`; for tenant-scoped admin routes the route's tenant id is a *selector* that is authorized first and only then bound to `TenantContext`; enabling `RequirePin` is rejected while active employees lack a PIN; the first Platform Admin is assigned in the Entra portal (no database seed). | No |
 | A17 | `POST /api/employees` is guarded by the placeholder policy `AdminOnly` (denies everyone) until the Entra scheme exists, so employee creation is currently unreachable over HTTP. | Yes (temporary) |
+| A18 | **Phase 4a choices.** (a) A Platform Admin is a validated token carrying the app role `Entra:PlatformAdminRole` (default `Platform.Admin`); there is no database row, so removing the app role in Entra applies when the token expires (about an hour). A Tenant Admin never relies on a claim: the mapping row is the only authority, so the `Tenant.Admin` app role is **not** required. (b) The token must carry the delegated scope `Entra:RequiredScope` (default `access_as_user`), which rejects app-only tokens. (c) Invalid token, wrong directory or malformed `tid`/`oid` is 401; a valid Entra user without an active mapping or tenant is signed in but unauthorized, 403; a database failure is 503 with `Retry-After`. (d) D8 is enforced with `TenantContext.RestrictToAdministration()` plus `IInventoryData` query filters and a write guard, not with a second DbContext (two contexts would make every `dotnet ef` command ambiguous without `--context`, including the CI/CD ones). (e) With no `Entra` settings the app starts and rejects every Entra token; partial or malformed settings stop startup. | Yes |
+| A19 | Platform permissions (`PlatformPermissions`): `Tenants.Read`, `Tenants.Manage`, `Devices.Manage`, `Employees.Manage`, `Sessions.Revoke` (all `Platform.`-prefixed). No inventory and no role-definition permission (A2). Tenant Admin permissions are the Admin-scope catalog. | Yes |
+| A20 | Read-only admin endpoints exist so the policies can be exercised: `GET /api/admin/me`, `GET /api/admin/tenant` (`Tenant.Settings`), `GET /api/platform/tenants`. `POST /api/employees` stays on the deny-all `AdminOnly` policy. | Yes |
 
 ## 6. Open issues (OPEN)
 
@@ -92,7 +97,7 @@ Claude made or proposed these; the user said to use best practices and proceed. 
 | O2 | **Same-site hosting for the React app (A4) is not decided.** If React must live on another site, SameSite=Strict cookies will not be sent and the device-authentication design (A3) has to change. Custom domain, same App Service, or a proxy are the options. |
 | O3 | CI results for the three pushes (Phases 1 to 3) were never verified: `gh` is not installed locally. The new "Verify EF Core migrations" CI step has never run on GitHub. |
 | O4 | The real state of the Azure database is unverified by Claude (no access): its migration history (probably only `InitialCreate`) and contents are known only from the user's statement (D5). The reset migration irreversibly drops the old tables when applied. Between the migration and the deployment, CD leaves the old API running against the new schema for a few minutes (accepted for a PoC with no clients; not explicitly confirmed). |
-| O5 | Entra specifics are undecided: app registration, audience and scopes, how B2B guests get the app roles, Conditional Access, how the `TenantAdmin` mapping rows are created, token validation settings. |
+| O5 | Entra, remaining after Phase 4a: the **app registration itself** (client id, exposed API with scope `access_as_user`, `accessTokenAcceptedVersion` = 2, app role `Platform.Admin`, assigning it, inviting B2B guests), Conditional Access/MFA, and how `TenantAdmin` rows are created (no endpoint yet; the invite-then-claim flow is not built). The code validates tokens and resolves administrators; nothing was run against a real directory. |
 | O6 | Signing-key management in Azure (Key Vault reference vs app setting) and rotation (a key change ends all sessions). |
 | O7 | `Program.cs` runs `Migrate()` at startup, so the app's database login needs DDL rights. Whether to separate a migration identity is undecided. |
 | O8 | A1, A2, A6 (the exact meaning of the TenantAdmin role, Platform Admin's reach over role definitions, and the default permission sets) have not been confirmed individually. |
@@ -130,9 +135,9 @@ Every tenant-owned entity implements `ITenantOwned` (has `TenantId`). Every key 
 4. **Authorization.** One policy per inventory permission (`[Authorize(Policy = Permissions.X)]`), `Policies.EmployeeSession`, `Policies.AdminOnly` (placeholder), `[AllowAnonymous]` only on `enroll` and `login`, plus a default-deny fallback policy. `EndpointGuardrailTests` fails on unmarked actions or new anonymous endpoints.
 5. Other endpoints: `POST /api/auth/logout`, `POST /api/auth/change-pin`.
 
-### 7.4 Administrator authentication (NOT implemented, planned for Phase 4)
+### 7.4 Administrator authentication (Phase 4a: implemented and tested with a locally signed Entra-style token; not run against a real directory)
 
-Microsoft Entra ID via JWT bearer, app roles `Platform.Admin` and `Tenant.Admin` (A16), `/api/admin/...` endpoints, tenant-scoped policy. The tenant of an admin call is derived from an authorization check against the `TenantAdmin` mapping, never trusted from the route alone.
+Implemented: `Security/EntraAuthentication.cs`, `EntraOptions`, `AdminPolicies`, `PlatformPermissions`, `Models/TenantAdmin.cs` (migration `AddTenantAdmins`), `AdminController`, `PlatformController`; see `CLAUDE.md` for the flow. Still planned for 4b: the `/api/admin` management endpoints, where a Platform Admin acting inside a tenant must bind the tenant only after authorizing it (A16).
 
 ### 7.5 Other design facts
 
@@ -196,7 +201,8 @@ Permission catalog (`Security/Permissions.cs`). **Inventory scope** (badge emplo
 | 1 | Tenant schema, composite keys/FKs, query filters, write guard, design-time factory, reset migration, migration tests, CI migration step | Done (`b6c4ca0`) |
 | 2 | Permission catalog, roles, default roles, `EmployeeRole` DB constraints, PIN hashing and lockout logic, `RequirePin`, `IsActive` | Done (`afc57f1`) |
 | 3 | Devices, enrollment cookie, sessions, login/logout/change-pin, JWT with per-request validation, policies and fallback, rate limiting, DTO changes, HTTP tests, guardrail test | Done (`f0d071d`) |
-| 4 | Entra administration (below) | **Not started** |
+| 4a | Entra scheme, `TenantAdmin` mapping, administrator policies, D8 restriction, tests | **Done locally, uncommitted** |
+| 4b | Administration endpoints (tenants, devices, employees, roles, sessions), Swagger only in Development | **Not started** |
 | 5 | Deployment hardening and merge (below) | **Not started** |
 
 ### Phase 4 scope (planned; details are assumptions A2, A16)

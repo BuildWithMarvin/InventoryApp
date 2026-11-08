@@ -5,7 +5,7 @@ namespace InventoryApp.Api.Models
 {
 
 
-    public class ProductStock : ITenantOwned
+    public class ProductStock : IInventoryData
     {
         
         private ProductStock() { }

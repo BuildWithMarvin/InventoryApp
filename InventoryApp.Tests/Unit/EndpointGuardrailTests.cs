@@ -21,6 +21,7 @@ public class EndpointGuardrailTests
         ..Permissions.Of(PermissionScope.Inventory),
         Policies.EmployeeSession,
         Policies.AdminOnly,
+        ..AdminPolicies.All,
     ];
 
     private static IEnumerable<(Type Controller, MethodInfo Action)> Actions() =>
@@ -78,5 +79,44 @@ public class EndpointGuardrailTests
     public void NoPolicy_GrantsEmployeesAnAdminPermission()
     {
         Assert.Empty(KnownPolicies.Where(p => Permissions.IsDefined(p) && Permissions.ScopeOf(p) == PermissionScope.Admin));
+    }
+
+    [Fact]
+    public void NoAdminPermissionName_IsAnEmployeePolicy_AndEveryAdminPolicyHasAPrefix()
+    {
+        // Admin policies are prefixed ("TenantAdmin:Tenant.Settings"), so a policy named after a bare permission can
+        // only ever be an employee (inventory) policy.
+        Assert.All(AdminPolicies.All.Where(p => p != AdminPolicies.Session), p =>
+            Assert.True(p.StartsWith(AdminPolicies.TenantAdminPrefix) || p.StartsWith(AdminPolicies.PlatformAdminPrefix), p));
+    }
+
+    private static readonly string[] AdminRoutePrefixes = ["api/admin", "api/platform"];
+
+    private static string? RouteOf(Type controller) =>
+        controller.GetCustomAttributes<RouteAttribute>().Select(r => r.Template).FirstOrDefault();
+
+    [Fact]
+    public void AdministratorPolicies_AreOnlyUsedOnAdministratorRoutes_AndNeverMixedWithEmployeePolicies()
+    {
+        foreach (var action in Actions())
+        {
+            var policies = AuthorizeAttributes(action).Select(a => a.Policy).OfType<string>().ToList();
+            var usesAdmin = policies.Any(AdminPolicies.All.Contains);
+            var usesEmployee = policies.Any(p => !AdminPolicies.All.Contains(p));
+            var onAdminRoute = AdminRoutePrefixes.Contains(RouteOf(action.Controller));
+
+            Assert.False(usesAdmin && usesEmployee, $"{Name(action)} mixes administrator and employee policies.");
+            Assert.False(usesAdmin && !onAdminRoute, $"{Name(action)} uses an administrator policy outside /api/admin and /api/platform.");
+            Assert.False(onAdminRoute && !usesAdmin, $"{Name(action)} is on an administrator route without an administrator policy.");
+        }
+    }
+
+    [Fact]
+    public void EmployeeEndpoints_DoNotLiveOnAdministratorRoutes()
+    {
+        // The reverse of the rule above, stated on controllers: the employee-facing controllers keep their own routes.
+        var employeeControllers = new[] { typeof(Api.Controllers.ProductsController), typeof(Api.Controllers.AuthController), typeof(Api.Controllers.EmployeesController) };
+
+        Assert.All(employeeControllers, c => Assert.DoesNotContain(RouteOf(c), AdminRoutePrefixes));
     }
 }

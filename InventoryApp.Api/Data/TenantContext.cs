@@ -8,6 +8,15 @@ namespace InventoryApp.Api.Data
     {
         public int? TenantId { get; private set; }
 
+        /// <summary>
+        /// Whether this scope may read and write inventory data (products, stock, storage locations).
+        /// True for warehouse employees and the pre-login flows. An administrator request (Entra) is
+        /// restricted by <see cref="RestrictToAdministration"/> before anything else happens, so
+        /// administrators can never reach inventory data through the shared DbContext, whatever a
+        /// controller does (decision D8).
+        /// </summary>
+        public bool InventoryAccess { get; private set; } = true;
+
         public void Set(int tenantId)
         {
             if (tenantId <= 0)
@@ -19,5 +28,11 @@ namespace InventoryApp.Api.Data
 
             TenantId = tenantId;
         }
+
+        /// <summary>
+        /// Takes inventory access away from this scope for good. There is deliberately no way back:
+        /// a request that was authenticated as an administrator stays an administrator request.
+        /// </summary>
+        public void RestrictToAdministration() => InventoryAccess = false;
     }
 }

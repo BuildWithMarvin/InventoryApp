@@ -385,6 +385,55 @@ namespace InventoryApp.Api.Migrations
                     b.ToTable("Tenants");
                 });
 
+            modelBuilder.Entity("InventoryApp.Api.Models.TenantAdmin", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DeactivatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("EntraObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EntraTenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleScope")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntraTenantId", "EntraObjectId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "RoleId", "RoleScope");
+
+                    b.ToTable("TenantAdmins", t =>
+                        {
+                            t.HasCheckConstraint("CK_TenantAdmins_AdminRoleOnly", "[RoleScope] = 1");
+                        });
+                });
+
             modelBuilder.Entity("InventoryApp.Api.Models.Device", b =>
                 {
                     b.HasOne("InventoryApp.Api.Models.Tenant", null)
@@ -540,6 +589,24 @@ namespace InventoryApp.Api.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("InventoryApp.Api.Models.TenantAdmin", b =>
+                {
+                    b.HasOne("InventoryApp.Api.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryApp.Api.Models.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RoleId", "RoleScope")
+                        .HasPrincipalKey("TenantId", "Id", "Scope")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("InventoryApp.Api.Models.Employee", b =>

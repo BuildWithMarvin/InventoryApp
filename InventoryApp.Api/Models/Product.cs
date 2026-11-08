@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InventoryApp.Api.Models
 {
-    public class Product : ITenantOwned
+    public class Product : IInventoryData
     {
 
         private Product() { }

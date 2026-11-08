@@ -19,6 +19,33 @@ namespace InventoryApp.Api.Security
 
         /// <summary>Added per request while the employee still has to replace an admin-set PIN.</summary>
         public const string MustChangePin = "must_change_pin";
+
+        // ---- Administrators (Microsoft Entra) ------------------------------------------------
+
+        /// <summary>Entra directory id of the signed-in identity. Not an InventoryApp tenant.</summary>
+        public const string EntraTenant = "tid";
+
+        /// <summary>Entra object id of the signed-in identity. The stable key; "sub" is pairwise per app.</summary>
+        public const string EntraObject = "oid";
+
+        /// <summary>Entra app roles of the token.</summary>
+        public const string EntraRoles = "roles";
+
+        /// <summary>Delegated scopes of the token, space separated. App-only tokens have none.</summary>
+        public const string EntraScope = "scp";
+
+        /// <summary>
+        /// Added per request after the administrator was resolved in the database ("tenant" or
+        /// "platform"). Tokens can't bring it along: it is removed before the principal is built.
+        /// </summary>
+        public const string AdminKind = "inv_admin_kind";
+
+        public const string AdminKindTenant = "tenant";
+
+        public const string AdminKindPlatform = "platform";
+
+        /// <summary>A platform permission (see <see cref="PlatformPermissions"/>). Never mixed up with <see cref="Permission"/>.</summary>
+        public const string PlatformPermission = "platform_permission";
     }
 
     public static class ClaimsPrincipalExtensions

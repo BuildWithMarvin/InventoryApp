@@ -17,7 +17,7 @@ namespace InventoryApp.Api.Security
     /// </summary>
     public static class EmployeeAuthentication
     {
-        public const string Scheme = "Employee";
+        public const string Scheme = "EmployeeJwt";
 
         public const string LoginRateLimit = "login";
         public const string EnrollRateLimit = "enroll";
@@ -36,6 +36,7 @@ namespace InventoryApp.Api.Security
             services.AddSingleton<JwtTokenService>();
 
             AddAuthentication(services);
+            services.AddEntraAuthentication(configuration);
             AddAuthorization(services);
             AddRateLimiting(services);
 
@@ -194,9 +195,14 @@ namespace InventoryApp.Api.Security
                     .AddAuthenticationSchemes(Scheme)
                     .RequireAuthenticatedUser());
 
+                // Still closed to everyone: the endpoints on it (employee creation) move to the Entra
+                // policies in AdminPolicies with the administration endpoints of the next phase.
                 options.AddPolicy(Policies.AdminOnly, policy => policy
                     .AddAuthenticationSchemes(Scheme)
                     .RequireAssertion(_ => false));
+
+                // Administrators (Entra) have their own policies; they never accept an employee token.
+                EntraAuthentication.AddAdminPolicies(options);
 
                 // Default deny: an endpoint nobody marked still requires a logged-in employee.
                 options.FallbackPolicy = new AuthorizationPolicyBuilder(Scheme)

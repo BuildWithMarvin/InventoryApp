@@ -6,8 +6,8 @@ namespace InventoryApp.Api.Security
         public const string EmployeeSession = "EmployeeSession";
 
         /// <summary>
-        /// Placeholder for operations that belong to Entra ID administrators (Phase 4). Until the Entra
-        /// scheme exists nobody satisfies it, so those endpoints are closed rather than open.
+        /// Placeholder that nobody satisfies, so an endpoint on it is closed rather than open. Employee
+        /// creation still uses it; the Entra administrator policies are in <see cref="AdminPolicies"/>.
         /// </summary>
         public const string AdminOnly = "AdminOnly";
     }

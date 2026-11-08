@@ -23,9 +23,16 @@ namespace InventoryApp.Api.Data
         public DbSet<EmployeeRole> EmployeeRoles => Set<EmployeeRole>();
         public DbSet<Device> Devices => Set<Device>();
         public DbSet<EmployeeSession> EmployeeSessions => Set<EmployeeSession>();
+        public DbSet<TenantAdmin> TenantAdmins => Set<TenantAdmin>();
 
         /// <summary>The tenant this context works for, or null if none has been set.</summary>
         public int? CurrentTenantId => _tenant.TenantId;
+
+        /// <summary>
+        /// False in an administrator request (see <see cref="TenantContext.RestrictToAdministration"/>):
+        /// inventory data is then invisible and unwritable.
+        /// </summary>
+        public bool InventoryAccess => _tenant.InventoryAccess;
 
         /// <summary>The current tenant. Throws if there is none, so a missing tenant never becomes a default.</summary>
         public int RequireTenantId() =>
@@ -69,7 +76,7 @@ namespace InventoryApp.Api.Data
                     .HasForeignKey(l => l.TenantId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                location.HasQueryFilter(l => l.TenantId == CurrentTenantId);
+                location.HasQueryFilter(l => InventoryAccess && l.TenantId == CurrentTenantId);
             });
 
             modelBuilder.Entity<Role>(role =>
@@ -189,6 +196,32 @@ namespace InventoryApp.Api.Data
                 session.HasQueryFilter(s => s.TenantId == CurrentTenantId);
             });
 
+            modelBuilder.Entity<TenantAdmin>(admin =>
+            {
+                // An Entra identity administers exactly one tenant: (tid, oid) is unique across all
+                // rows, active or not, so re-activating beats adding a second, conflicting mapping.
+                admin.HasIndex(a => new { a.EntraTenantId, a.EntraObjectId })
+                    .IsUnique();
+
+                // The role must be an Admin role of the same tenant: the key only matches the role's
+                // real scope, and the check only allows Admin (1). Employees get the mirror image
+                // (Inventory only) in EmployeeRoles.
+                admin.ToTable(t => t.HasCheckConstraint("CK_TenantAdmins_AdminRoleOnly", "[RoleScope] = 1"));
+
+                admin.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(a => a.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                admin.HasOne(a => a.Role)
+                    .WithMany()
+                    .HasForeignKey(a => new { a.TenantId, a.RoleId, a.RoleScope })
+                    .HasPrincipalKey(r => new { r.TenantId, r.Id, r.Scope })
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                admin.HasQueryFilter(a => a.TenantId == CurrentTenantId);
+            });
+
             modelBuilder.Entity<Product>(product =>
             {
                 product.HasKey(p => new { p.TenantId, p.InternalBarcode });
@@ -206,7 +239,7 @@ namespace InventoryApp.Api.Data
                     .HasPrincipalKey(e => new { e.TenantId, e.Id })
                     .OnDelete(DeleteBehavior.NoAction);
 
-                product.HasQueryFilter(p => p.TenantId == CurrentTenantId);
+                product.HasQueryFilter(p => InventoryAccess && p.TenantId == CurrentTenantId);
             });
 
             modelBuilder.Entity<ProductStock>(stock =>
@@ -234,7 +267,7 @@ namespace InventoryApp.Api.Data
                 stock.HasIndex(ps => new { ps.TenantId, ps.ProductInternalBarcode, ps.StorageLocationId })
                     .IsUnique();
 
-                stock.HasQueryFilter(ps => ps.TenantId == CurrentTenantId);
+                stock.HasQueryFilter(ps => InventoryAccess && ps.TenantId == CurrentTenantId);
             });
         }
 
@@ -262,6 +295,11 @@ namespace InventoryApp.Api.Data
             {
                 if (entry.State is EntityState.Unchanged or EntityState.Detached)
                     continue;
+
+                // Administrators (Entra) never write inventory data. The read side is the query filter.
+                if (entry.Entity is IInventoryData && !InventoryAccess)
+                    throw new InvalidOperationException(
+                        $"Cannot write a {entry.Metadata.ClrType.Name} in an administrator request.");
 
                 var tenantId = CurrentTenantId
                     ?? throw new InvalidOperationException(
