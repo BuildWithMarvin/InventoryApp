@@ -178,20 +178,19 @@ Permission catalog (`Security/Permissions.cs`). **Inventory scope** (badge emplo
 
 ## 11. Testing strategy and environment
 
-- **223 tests** at `f0d071d` (70 unit, 153 integration), all passing. Mutation checks confirmed that tests fail when session revocation, the device-cookie check, the PIN-failure retry or an `[Authorize]` attribute is removed.
+- **313 tests** at `3ad849e` (223 at `f0d071d`), all passing. Phase 4a added 90, including Entra token validation, mapping, policies, the D8 probes and database failure (`EntraAuthenticationTests`, `AdminAuthorizationTests`, `TenantAdminPersistenceTests`, `Unit/TenantAdminTests`, `Unit/EntraOptionsTests`). Mutation checks confirmed that tests fail when session revocation, the device-cookie check, the PIN-failure retry or an `[Authorize]` attribute is removed; for Phase 4a also when `RestrictToAdministration`, the mapping `IsActive` check, the `tid` check, the claim stripping, the inventory read filter, the inventory write guard or the scope check is removed.
 - Layers: unit tests (domain, hashing, credentials, guardrail); direct controller tests (`.AsEmployee(id)` supplies the user); tenant-isolation tests (queries, write guard, controllers, raw SQL against database constraints, each with a positive control); HTTP tests through the real pipeline (`ApiTestBase`, `ApiFactory`, `FakeTimeProvider`) for enrollment, login, PIN, sessions, forged tokens, authorization, rate limits.
 - Integration tests need SQL Server: local Docker container `mssql_db` (SQL Server 2019, `localhost,1433`; start it with `docker start mssql_db`); connection comes from `InventoryApp.Tests/local.runsettings` (gitignored; **never print its password**). CI uses SQL Server 2022.
 - `dotnet-ef`: the global tool on this machine is an 11.0 preview; CD pins 10.0.11. Use 10.0.11, e.g. `dotnet tool install dotnet-ef --version 10.0.11 --tool-path <dir>`.
 - Test scratch databases (`MigrationTest_*`, `MigrationScratch`) must not be left behind; the migration tests delete theirs.
 - To run the API itself: set `Auth:SigningKey` (`dotnet user-secrets set "Auth:SigningKey" "<32+ chars>" --project ./InventoryApp.Api`) and a connection string.
 
-## 12. Git status (as of 2026-10-31)
+## 12. Git status (as of 2026-11-08)
 
-- Current branch: `ft/multi-tenancy`, tracking `origin/ft/multi-tenancy`, **pushed**, tip `f0d071d`, working tree clean.
+- Current branch: `ft/multi-tenancy`, tracking `origin/ft/multi-tenancy`. Phases 0 to 3 and the context document are pushed (`d2fbc2f`). Phase 4a (`3ad849e`) and the documentation update after it are **local commits, not pushed**.
 - `origin/main` = `1ed7503` (unchanged). `origin/refactor/use-dtos` = `486bb14` (unmerged; ancestor of `ft/multi-tenancy`).
-- Commits on this work, in order: `6904479` Phase 0 (test infrastructure), `c22eaf4` (user's commit removing `backend-pipeline.yml.save`), `b6c4ca0` Phase 1 (tenant schema), `afc57f1` Phase 2 (roles, PINs), `f0d071d` Phase 3 (device enrollment, login, sessions).
+- Commits on this work, in order: `6904479` Phase 0 (test infrastructure), `c22eaf4` (user's commit removing `backend-pipeline.yml.save`), `b6c4ca0` Phase 1 (tenant schema), `afc57f1` Phase 2 (roles, PINs), `f0d071d` Phase 3 (device enrollment, login, sessions), `d2fbc2f` this document, `3ad849e` Phase 4a (Entra administrator authentication and authorization).
 - Nothing has been merged. The CD pipeline deploys only from `main`.
-- The document you are reading is new and **not yet committed** (the user asked only for it to be written).
 
 ## 13. Implementation status
 
@@ -205,13 +204,16 @@ Permission catalog (`Security/Permissions.cs`). **Inventory scope** (badge emplo
 | 4b | Administration endpoints (tenants, devices, employees, roles, sessions), Swagger only in Development | **Not started** |
 | 5 | Deployment hardening and merge (below) | **Not started** |
 
-### Phase 4 scope (planned; details are assumptions A2, A16)
+### Phase 4a scope (DONE, `3ad849e`; assumptions A18 to A20)
 
-- Entra JWT scheme, app roles `Platform.Admin` / `Tenant.Admin`, `TenantAdmin` mapping table, tenant-scoped authorization handler.
+- Entra JWT scheme (`Entra`), `TenantAdmin` mapping table (`AddTenantAdmins`), administrator policies, `PlatformPermissions`, the D8 restriction (`TenantContext.RestrictToAdministration`, `IInventoryData`), read-only `/api/admin/me`, `/api/admin/tenant`, `/api/platform/tenants`, tests with a locally signed Entra-style token. The employee scheme was renamed `EmployeeJwt`. Nothing was run against a real Entra directory (O5).
+
+### Phase 4b scope (planned; details are assumptions A2, A16)
+
 - `/api/admin` endpoints: tenants (create with default roles, activate/deactivate, `RequirePin` with the "no active employee without PIN" guard); devices (create, issue new enrollment code, deactivate); employees (create, assign roles, set PIN with `MustChangePin`, deactivate); roles and permissions (TenantAdmin only); sessions (list, revoke). Platform Admin never reaches inventory data.
 - Move `CreateEmployee` off the `AdminOnly` placeholder.
 - Swagger only in Development (D15).
-- Tests with a fake Entra scheme: tenant admin of A cannot touch B; employee tokens cannot reach admin endpoints and the reverse; platform admin cannot read products.
+- Tests for each new endpoint with the Phase 4a helpers (`EntraTestBase`): tenant admin of A cannot touch B, employee tokens cannot reach admin endpoints and the reverse, platform admin cannot read products. A Platform Admin acting inside a tenant must authorize the tenant before `TenantContext.Set` (A16).
 
 ### Phase 5 scope (planned)
 
@@ -231,8 +233,8 @@ The React frontend, MAUI changes, new storage-location/stock endpoints (O9).
 
 ## 15. Starting a new session
 
-1. Read this file and `CLAUDE.md`. Run `git status -sb` and `git log --oneline -5`; confirm you are on `ft/multi-tenancy` at or after `f0d071d`.
-2. Start SQL Server (`docker start mssql_db`) and run `dotnet test ./InventoryApp.Tests` to confirm the baseline (223 passing).
-3. Ask the user which of these they want next: start Phase 4; verify the CI result of the pushes (O3); decide O1/O2. Do not start Phase 4 without the user's go-ahead, and state the phase scope first (section 2).
+1. Read this file and `CLAUDE.md`. Run `git status -sb` and `git log --oneline -5`; confirm you are on `ft/multi-tenancy` at or after `3ad849e`.
+2. Start SQL Server (`docker start mssql_db`) and run `dotnet test ./InventoryApp.Tests` to confirm the baseline (313 passing).
+3. Ask the user which of these they want next: start Phase 4b; verify the CI result of the pushes (O3); decide O1/O2. Do not start Phase 4b without the user's go-ahead, and state the phase scope first (section 2).
 4. Do not merge or push without explicit approval. Commit locally at the end of a phase.
 5. Raise unresolved items from section 6 only when they become relevant to the work in hand.
