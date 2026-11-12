@@ -26,6 +26,10 @@ namespace InventoryApp.Api.Security
 
         // Platform administrator.
         public const string PlatformTenantsRead = PlatformAdminPrefix + PlatformPermissions.TenantsRead;
+        public const string PlatformTenantsManage = PlatformAdminPrefix + PlatformPermissions.TenantsManage;
+        public const string PlatformDevicesManage = PlatformAdminPrefix + PlatformPermissions.DevicesManage;
+        public const string PlatformEmployeesManage = PlatformAdminPrefix + PlatformPermissions.EmployeesManage;
+        public const string PlatformSessionsRevoke = PlatformAdminPrefix + PlatformPermissions.SessionsRevoke;
 
         public static string ForTenantAdmin(string permission) => TenantAdminPrefix + permission;
 

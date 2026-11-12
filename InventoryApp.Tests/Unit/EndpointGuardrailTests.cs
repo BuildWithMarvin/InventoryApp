@@ -20,7 +20,6 @@ public class EndpointGuardrailTests
     [
         ..Permissions.Of(PermissionScope.Inventory),
         Policies.EmployeeSession,
-        Policies.AdminOnly,
         ..AdminPolicies.All,
     ];
 
@@ -92,6 +91,9 @@ public class EndpointGuardrailTests
 
     private static readonly string[] AdminRoutePrefixes = ["api/admin", "api/platform"];
 
+    private static bool IsAdminRoute(string? route) =>
+        route is not null && AdminRoutePrefixes.Any(prefix => route == prefix || route.StartsWith(prefix + "/"));
+
     private static string? RouteOf(Type controller) =>
         controller.GetCustomAttributes<RouteAttribute>().Select(r => r.Template).FirstOrDefault();
 
@@ -103,7 +105,7 @@ public class EndpointGuardrailTests
             var policies = AuthorizeAttributes(action).Select(a => a.Policy).OfType<string>().ToList();
             var usesAdmin = policies.Any(AdminPolicies.All.Contains);
             var usesEmployee = policies.Any(p => !AdminPolicies.All.Contains(p));
-            var onAdminRoute = AdminRoutePrefixes.Contains(RouteOf(action.Controller));
+            var onAdminRoute = IsAdminRoute(RouteOf(action.Controller));
 
             Assert.False(usesAdmin && usesEmployee, $"{Name(action)} mixes administrator and employee policies.");
             Assert.False(usesAdmin && !onAdminRoute, $"{Name(action)} uses an administrator policy outside /api/admin and /api/platform.");
@@ -115,8 +117,32 @@ public class EndpointGuardrailTests
     public void EmployeeEndpoints_DoNotLiveOnAdministratorRoutes()
     {
         // The reverse of the rule above, stated on controllers: the employee-facing controllers keep their own routes.
-        var employeeControllers = new[] { typeof(Api.Controllers.ProductsController), typeof(Api.Controllers.AuthController), typeof(Api.Controllers.EmployeesController) };
+        var employeeControllers = new[] { typeof(Api.Controllers.ProductsController), typeof(Api.Controllers.AuthController) };
 
-        Assert.All(employeeControllers, c => Assert.DoesNotContain(RouteOf(c), AdminRoutePrefixes));
+        Assert.All(employeeControllers, c => Assert.False(IsAdminRoute(RouteOf(c)), c.Name));
+    }
+
+    [Fact]
+    public void EveryPlatformController_WithATenantInItsRoute_BindsItOnlyThroughTheFilter()
+    {
+        // The route's tenant id is only a selector. The filter binds it after authorization; nothing else may.
+        var controllers = typeof(Program).Assembly.GetTypes()
+            .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract)
+            .Where(t => RouteOf(t) is { } route && route.StartsWith("api/platform") && route.Contains("{tenantId"))
+            .ToList();
+
+        Assert.NotEmpty(controllers);
+        Assert.All(controllers, c => Assert.NotEmpty(c.GetCustomAttributes<BindRouteTenantAttribute>()));
+    }
+
+    [Fact]
+    public void NoAction_TakesATenantIdParameter_ExceptThroughTheRoute()
+    {
+        // Requests never carry a TenantId. Route parameters are bound by the filter, so actions don't take them.
+        var offenders = Actions()
+            .Where(a => a.Action.GetParameters().Any(p => p.Name!.Contains("tenantId", StringComparison.OrdinalIgnoreCase)))
+            .Select(Name);
+
+        Assert.Empty(offenders);
     }
 }

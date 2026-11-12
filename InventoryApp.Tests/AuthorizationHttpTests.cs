@@ -100,11 +100,13 @@ public class AuthorizationHttpTests : ApiTestBase
     {
         var request = new CreateEmployeeRequest("Tom", "EMP-1");
 
-        var asManager = await SendAsync(HttpMethod.Post, "/api/employees", request, _managerToken);
-        var asWorker = await SendAsync(HttpMethod.Post, "/api/employees", request, _workerToken);
+        // Employee creation is an administrator operation (Entra). A badge login is not even authenticated there:
+        // the administrator policies accept Entra tokens only.
+        var asManager = await SendAsync(HttpMethod.Post, "/api/admin/employees", request, _managerToken);
+        var asWorker = await SendAsync(HttpMethod.Post, "/api/admin/employees", request, _workerToken);
 
-        Assert.Equal(HttpStatusCode.Forbidden, asManager.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, asWorker.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, asManager.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, asWorker.StatusCode);
         await using var context = CreateContextFor(Tenant);
         Assert.False(await context.Employees.AnyAsync(e => e.BadgeBarcode == "EMP-1"));
     }

@@ -195,12 +195,6 @@ namespace InventoryApp.Api.Security
                     .AddAuthenticationSchemes(Scheme)
                     .RequireAuthenticatedUser());
 
-                // Still closed to everyone: the endpoints on it (employee creation) move to the Entra
-                // policies in AdminPolicies with the administration endpoints of the next phase.
-                options.AddPolicy(Policies.AdminOnly, policy => policy
-                    .AddAuthenticationSchemes(Scheme)
-                    .RequireAssertion(_ => false));
-
                 // Administrators (Entra) have their own policies; they never accept an employee token.
                 EntraAuthentication.AddAdminPolicies(options);
 

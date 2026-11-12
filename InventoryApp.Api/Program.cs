@@ -31,8 +31,13 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Swagger describes the whole API surface, so it is a Development tool only (D15). It never replaces
+// authentication and authorization.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 
 app.UseForwardedHeaders();
