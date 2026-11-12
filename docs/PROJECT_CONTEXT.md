@@ -1,6 +1,6 @@
 # InventoryApp: multi-tenancy and security refactor, project context
 
-Last updated: 2026-11-12, after Phase 4b (administration endpoints, Swagger only in Development; local commit, hash in section 12). Phase 4a is commit `3ad849e`, Phase 3 is `f0d071d`.
+Last updated: 2026-11-12, after Phase 4b (administration endpoints, Swagger only in Development; commit `6005e09`). Phase 4a is commit `3ad849e`, Phase 3 is `f0d071d`.
 Purpose: a standalone starting context for a new Claude Code session. Read this first, then `CLAUDE.md` (conventions, commands, test rules). `CLAUDE.md` describes how the code works today; this file records **why**, what was **decided by whom**, and **what is left**.
 
 ## How to read this document
@@ -196,7 +196,7 @@ Permission catalog (`Security/Permissions.cs`). **Inventory scope** (badge emplo
 
 - Current branch: `ft/multi-tenancy`, tracking `origin/ft/multi-tenancy`. Phases 0 to 3 and the context document are pushed (`d2fbc2f`). Phase 4a (`3ad849e`), the documentation updates after it and Phase 4b are **local commits, not pushed**.
 - `origin/main` = `1ed7503` (unchanged). `origin/refactor/use-dtos` = `486bb14` (unmerged; ancestor of `ft/multi-tenancy`).
-- Commits on this work, in order: `6904479` Phase 0 (test infrastructure), `c22eaf4` (user's commit removing `backend-pipeline.yml.save`), `b6c4ca0` Phase 1 (tenant schema), `afc57f1` Phase 2 (roles, PINs), `f0d071d` Phase 3 (device enrollment, login, sessions), `d2fbc2f` this document, `3ad849e` Phase 4a (Entra administrator authentication and authorization).
+- Commits on this work, in order: `6904479` Phase 0 (test infrastructure), `c22eaf4` (user's commit removing `backend-pipeline.yml.save`), `b6c4ca0` Phase 1 (tenant schema), `afc57f1` Phase 2 (roles, PINs), `f0d071d` Phase 3 (device enrollment, login, sessions), `d2fbc2f` this document, `3ad849e` Phase 4a (Entra administrator authentication and authorization), `6005e09` Phase 4b (administration endpoints).
 - Nothing has been merged. The CD pipeline deploys only from `main`.
 
 ## 13. Implementation status
@@ -208,7 +208,7 @@ Permission catalog (`Security/Permissions.cs`). **Inventory scope** (badge emplo
 | 2 | Permission catalog, roles, default roles, `EmployeeRole` DB constraints, PIN hashing and lockout logic, `RequirePin`, `IsActive` | Done (`afc57f1`) |
 | 3 | Devices, enrollment cookie, sessions, login/logout/change-pin, JWT with per-request validation, policies and fallback, rate limiting, DTO changes, HTTP tests, guardrail test | Done (`f0d071d`) |
 | 4a | Entra scheme, `TenantAdmin` mapping, administrator policies, D8 restriction, tests | **Done, committed locally (`3ad849e`), not pushed.** Executed locally only: 313 tests passed on SQL Server 2019. CI and Azure unverified. |
-| 4b | Administration endpoints (tenants, devices, employees, roles, sessions, tenant administrators), Swagger only in Development | **Done, committed locally (hash in section 12), not pushed.** Executed locally only: 411 tests passed on SQL Server 2019. CI, Azure and a real Entra directory unverified. |
+| 4b | Administration endpoints (tenants, devices, employees, roles, sessions, tenant administrators), Swagger only in Development | **Done, committed locally (`6005e09`), not pushed.** Executed locally only: 411 tests passed on SQL Server 2019. CI, Azure and a real Entra directory unverified. |
 | 5 | Deployment hardening and merge (below) | **Not started** |
 
 ### Phase 4a scope (DONE, `3ad849e`; assumptions A18 to A20)
