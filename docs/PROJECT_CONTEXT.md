@@ -111,7 +111,7 @@ Claude made or proposed these; the user said to use best practices and proceed. 
 | O9 | The API still lacks endpoints for storage locations and stock (the permissions exist in the catalog; the old "stock +/-" feature has no endpoint). Devices, employees, roles, sessions and administrators have endpoints since 4b. |
 | O10 | Residual risks: a burst of parallel PIN guesses before the lockout lands is bounded only by the rate limit; the in-process rate limiter is per instance; `EmployeeSession` rows are never purged. |
 | O11 | The React frontend does not exist (stack and location unknown). The MAUI client no longer matches the API (login, `EmployeeId`, DTOs) and is intentionally not updated. |
-| O12 | `README.md` is outdated (still mentions In-Memory testing). |
+| O12 | `README.md` was rewritten on 2026-11-23 to match the state after Phase 4b (status table, real test setup, local run steps). It must be updated again after Phase 5. |
 | O13 | Production role values were never inspected (no access); treated as moot under D5. If real roles existed, nothing carries over: the old `Employee.Role` column was dropped. |
 
 ## 7. Target architecture and what exists
