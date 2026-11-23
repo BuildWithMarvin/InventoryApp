@@ -16,7 +16,7 @@ The project is in the middle of a **multi-tenancy and security refactor** (branc
 | Entra app registration, MFA/Conditional Access, deployment hardening, merge to `main` | Not started (Phase 5) |
 | Endpoints for storage locations and stock +/- | Not built yet |
 | React frontend | Not started |
-| MAUI client | Legacy, no longer matches the API, will not be updated |
+| MAUI client | Removed |
 
 Not yet verified: GitHub Actions results for the refactor, the Azure database/deployment, and a real Entra directory. See [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) for decisions, assumptions, open issues and the remaining phases.
 
@@ -33,7 +33,6 @@ Not yet verified: GitHub Actions results for the refactor, the Azure database/de
 
 * **Backend:** ASP.NET Core Web API (`net10.0`), EF Core, SQL Server. Controllers use `InventoryDbContext` directly and exchange DTOs, never entities. Swagger is only served in Development.
 * **Frontend:** to be a React app (browser-based PDA client). It does not exist yet; the API stays frontend-agnostic (plain JSON over HTTP). The React app and the API need to be served from the same site because of the SameSite=Strict device cookie.
-* **Legacy client:** `InventoryApp.Maui` (.NET MAUI, MVVM) is kept for reference only and is not part of the solution.
 * **Hosting:** Azure Web App and Azure SQL. The CD pipeline runs on `main` only.
 
 ## Why React instead of .NET MAUI

@@ -6,10 +6,6 @@ using Microsoft.AspNetCore.Mvc.Routing;
 
 namespace InventoryApp.Tests.Unit;
 
-/// <summary>
-/// Fails when someone adds an endpoint without deciding who may call it. Every action must carry an
-/// explicit [Authorize(Policy = ...)] or [AllowAnonymous], and the list of anonymous endpoints is fixed.
-/// </summary>
 [Trait("Category", "Unit")]
 public class EndpointGuardrailTests
 {

@@ -25,7 +25,6 @@ namespace InventoryApp.Api.Security
             return BC.HashPassword(pin, WorkFactor);
         }
 
-        /// <summary>False for a wrong PIN, a malformed PIN or a missing or corrupt hash.</summary>
         public static bool Verify(string? pin, string? hash)
         {
             if (!IsValidFormat(pin) || string.IsNullOrEmpty(hash))

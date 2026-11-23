@@ -16,8 +16,6 @@ public class RolesAndPinsTests : IntegrationTestBase
     {
     }
 
-    // ---- Roles and permissions -------------------------------------------------------
-
     [Fact]
     public async Task DefaultRoles_ArePersistedWithTheirPermissions()
     {
@@ -81,15 +79,13 @@ public class RolesAndPinsTests : IntegrationTestBase
             reloaded.Permissions.Select(p => p.Permission).Order());
     }
 
-    // ---- Employees and roles ---------------------------------------------------------
-
     [Fact]
     public async Task EmployeeWithARole_IsPersistedAndLoaded()
     {
         var role = await Context.Roles.SingleAsync(r => r.Name == DefaultRoles.WarehouseEmployee);
         var employee = new Employee(TenantId, "Tom", "EMP-1");
         employee.AssignRole(role);
-        employee.AssignRole(role); // idempotent
+        employee.AssignRole(role);
 
         Context.Employees.Add(employee);
         await Context.SaveChangesAsync();
@@ -144,8 +140,6 @@ public class RolesAndPinsTests : IntegrationTestBase
 
         await Assert.ThrowsAsync<DbUpdateException>(() => fresh.SaveChangesAsync());
     }
-
-    // ---- The database enforces the rules on its own ----------------------------------
 
     [Fact]
     public async Task Database_RejectsAnAdminRoleForAnEmployee()
@@ -204,8 +198,6 @@ public class RolesAndPinsTests : IntegrationTestBase
             $"INSERT INTO RolePermissions (TenantId, RoleId, Permission) VALUES ({TenantId}, {foreignRole.Id}, {Permissions.LocationsManage})"));
     }
 
-    // ---- PIN state and tenant setting ------------------------------------------------
-
     [Fact]
     public async Task PinState_SurvivesAReload()
     {
@@ -213,7 +205,7 @@ public class RolesAndPinsTests : IntegrationTestBase
         employee.SetPin(PinHasher.Hash("123456"), mustChangePin: true);
         for (var i = 0; i < Employee.MaxFailedPinAttempts; i++)
             employee.RegisterFailedPin(Now);
-        employee.RegisterFailedPin(Now); // ignored while locked out
+        employee.RegisterFailedPin(Now);
         Context.Employees.Add(employee);
         await Context.SaveChangesAsync();
 
@@ -244,8 +236,6 @@ public class RolesAndPinsTests : IntegrationTestBase
         await using var fresh = CreateContextWithoutTenant();
         Assert.True((await fresh.Tenants.SingleAsync(t => t.Id == TenantId)).RequirePin);
     }
-
-    // ---- Creating a tenant (the flow a platform admin will use) ----------------------
 
     [Fact]
     public async Task ANewTenant_CanBeCreatedAndSeededInOneScope()

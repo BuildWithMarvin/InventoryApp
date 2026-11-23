@@ -13,7 +13,7 @@ public class DeviceCredentialsTests
         Assert.Equal(26, DeviceCredentials.NewEnrollmentCode().Length);
 
         var credential = DeviceCredentials.NewCredential();
-        Assert.Equal(43, credential.Length); // 256 bits, base64url without padding
+        Assert.Equal(43, credential.Length);
         Assert.DoesNotContain('+', credential);
         Assert.DoesNotContain('/', credential);
         Assert.DoesNotContain('=', credential);
@@ -121,7 +121,7 @@ public class DeviceTests
         Assert.True(device.VerifyCredential(credential));
         Assert.DoesNotContain(credential, device.CredentialHash);
         Assert.Null(device.EnrollmentCodeHash);
-        Assert.Null(device.CompleteEnrollment(Now.AddMinutes(6))); // single use
+        Assert.Null(device.CompleteEnrollment(Now.AddMinutes(6)));
     }
 
     [Fact]

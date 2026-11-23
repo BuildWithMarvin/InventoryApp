@@ -8,12 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InventoryApp.Api.Controllers
 {
-    /// <summary>
-    /// Endpoints for a Platform Admin (Microsoft Entra, app role) that concern the tenants themselves. They
-    /// work across tenants and so have no tenant of their own; what a Platform Admin does inside a tenant is in
-    /// <see cref="PlatformTenantController"/>. A Platform Admin request can't read inventory data: the
-    /// DbContext hides it from every administrator request (<see cref="TenantContext.RestrictToAdministration"/>).
-    /// </summary>
     [Route("api/platform")]
     [ApiController]
     public class PlatformController : ControllerBase
@@ -39,7 +33,6 @@ namespace InventoryApp.Api.Controllers
             return Ok(tenants.Select(TenantSummaryDto.FromEntity).ToList());
         }
 
-        /// <summary>Creates a tenant with its three default roles. Add its first administrator afterwards.</summary>
         [HttpPost("tenants")]
         [Authorize(Policy = AdminPolicies.PlatformTenantsManage)]
         public async Task<ActionResult<TenantDto>> CreateTenant(NameRequest request)
@@ -71,7 +64,6 @@ namespace InventoryApp.Api.Controllers
                 _context.Tenants.Add(tenant);
                 await _context.SaveChangesAsync();
 
-                // Same as ANewTenant_CanBeCreatedAndSeededInOneScope: bind the new tenant, then add its roles.
                 _tenantContext.Set(tenant.Id);
                 _context.Roles.AddRange(DefaultRoles.CreateFor(tenant.Id));
                 await _context.SaveChangesAsync();
@@ -119,7 +111,6 @@ namespace InventoryApp.Api.Controllers
             return Ok(TenantDto.FromEntity(tenant));
         }
 
-        /// <summary>An inactive tenant stops everything at once: logins, running sessions and its administrators.</summary>
         [HttpPost("tenants/{id:int}/activate")]
         [Authorize(Policy = AdminPolicies.PlatformTenantsManage)]
         public Task<ActionResult<TenantDto>> ActivateTenant(int id) => SetTenantActive(id, true);

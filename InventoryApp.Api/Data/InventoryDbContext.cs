@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InventoryApp.Api.Data
 {
-
     public class InventoryDbContext : DbContext
     {
         private readonly TenantContext _tenant;
@@ -25,16 +24,10 @@ namespace InventoryApp.Api.Data
         public DbSet<EmployeeSession> EmployeeSessions => Set<EmployeeSession>();
         public DbSet<TenantAdmin> TenantAdmins => Set<TenantAdmin>();
 
-        /// <summary>The tenant this context works for, or null if none has been set.</summary>
         public int? CurrentTenantId => _tenant.TenantId;
 
-        /// <summary>
-        /// False in an administrator request (see <see cref="TenantContext.RestrictToAdministration"/>):
-        /// inventory data is then invisible and unwritable.
-        /// </summary>
         public bool InventoryAccess => _tenant.InventoryAccess;
 
-        /// <summary>The current tenant. Throws if there is none, so a missing tenant never becomes a default.</summary>
         public int RequireTenantId() =>
             _tenant.TenantId ?? throw new InvalidOperationException("No tenant has been set for this request.");
 

@@ -10,11 +10,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace InventoryApp.Api.Security
 {
-    /// <summary>
-    /// Employee (badge) authentication: a signed JWT that is checked against the database on every
-    /// request, so revoking a session, deactivating an employee, a device or a tenant, or changing a
-    /// role takes effect on the very next request.
-    /// </summary>
     public static class EmployeeAuthentication
     {
         public const string Scheme = "EmployeeJwt";
@@ -89,11 +84,6 @@ namespace InventoryApp.Api.Security
                 });
         }
 
-        /// <summary>
-        /// Runs after the signature is verified. The token is only a pointer to a session: everything
-        /// that decides whether and how it may be used comes from the database. This is also where the
-        /// request's tenant is set, from the stored session and never from client input.
-        /// </summary>
         private static async Task ValidateSessionAsync(TokenValidatedContext context)
         {
             var services = context.HttpContext.RequestServices;

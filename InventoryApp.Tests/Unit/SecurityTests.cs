@@ -51,7 +51,7 @@ public class PinHasherTests
     [InlineData("1234567")]
     [InlineData("12345a")]
     [InlineData("12 456")]
-    [InlineData("١٢٣٤٥٦")] // Arabic-Indic digits are digits, but not ASCII ones.
+    [InlineData("١٢٣٤٥٦")]
     public void IsValidFormat_RejectsEverythingElse(string? pin)
     {
         Assert.False(PinHasher.IsValidFormat(pin));

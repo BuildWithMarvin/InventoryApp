@@ -2,16 +2,13 @@
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
-
 namespace InventoryApp.Api.Models
 {
     [Index(nameof(TenantId), nameof(BadgeBarcode), IsUnique = true)]
     public class Employee : ITenantOwned
     {
-        /// <summary>Failed PIN attempts that trigger a lockout.</summary>
         public const int MaxFailedPinAttempts = 5;
 
-        /// <summary>How long a lockout lasts.</summary>
         public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
 
         private Employee() { }
@@ -60,20 +57,15 @@ namespace InventoryApp.Api.Models
         [MaxLength(50)]
         public string BadgeBarcode { get; private set; } = string.Empty;
 
-        /// <summary>Inactive employees can't log in. Employees are deactivated, never deleted.</summary>
         public bool IsActive { get; private set; } = true;
 
         public ICollection<EmployeeRole> EmployeeRoles { get; } = new List<EmployeeRole>();
 
-        // ---- PIN ---------------------------------------------------------------------
-
-        /// <summary>BCrypt hash of the six-digit PIN, or null if the employee has none.</summary>
         [MaxLength(100)]
         public string? PinHash { get; private set; }
 
         public bool HasPin => PinHash is not null;
 
-        /// <summary>Set after an admin chose the PIN: the employee must replace it before doing anything else.</summary>
         public bool MustChangePin { get; private set; }
 
         public int FailedPinAttempts { get; private set; }
@@ -98,10 +90,6 @@ namespace InventoryApp.Api.Models
 
         public void Activate() => IsActive = true;
 
-        /// <summary>
-        /// Gives the employee an Inventory role of the same tenant. Admin roles are refused
-        /// here and, as a second line, by the database.
-        /// </summary>
         public void AssignRole(Role role)
         {
             ArgumentNullException.ThrowIfNull(role);
@@ -126,10 +114,6 @@ namespace InventoryApp.Api.Models
                 EmployeeRoles.Remove(assignment);
         }
 
-        /// <summary>
-        /// Stores a new PIN hash (see <see cref="PinHasher"/>) and clears any lockout.
-        /// An admin setting the PIN passes mustChangePin: true; the employee changing their own passes false.
-        /// </summary>
         public void SetPin(string pinHash, bool mustChangePin)
         {
             if (string.IsNullOrWhiteSpace(pinHash))

@@ -9,17 +9,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace InventoryApp.Api.Security
 {
-    /// <summary>
-    /// Administrator authentication: Microsoft Entra ID access tokens for Platform Admins and Tenant
-    /// Admins. Separate from the employee scheme on purpose: different issuer, key and audience, so
-    /// neither kind of token is ever valid for the other.
-    ///
-    /// Entra only says who the person is. What they may do comes from this application's database:
-    /// a Tenant Admin from the active <see cref="Models.TenantAdmin"/> row of <c>(tid, oid)</c> and the
-    /// permissions of its role, looked up on every request; a Platform Admin from the app role
-    /// <see cref="EntraOptions.PlatformAdminRole"/> of the validated token and the fixed
-    /// <see cref="PlatformPermissions"/>. A tenant id from the client is never consulted.
-    /// </summary>
     public static class EntraAuthentication
     {
         public const string Scheme = "Entra";
@@ -116,7 +105,6 @@ namespace InventoryApp.Api.Security
             return services;
         }
 
-        /// <summary>The policies of both administrator kinds. Called from the authorization setup.</summary>
         internal static void AddAdminPolicies(AuthorizationOptions options)
         {
             options.AddPolicy(AdminPolicies.Session, policy => policy

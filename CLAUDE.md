@@ -4,14 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Proof-of-concept inventory app: a mobile client (barcode scanning, stock check-in/out, badge login) talking to an ASP.NET Core Web API backed by SQL Server (Azure SQL in production). Some comments, UI strings and config placeholders are in German.
+Proof-of-concept inventory system: an ASP.NET Core Web API backed by SQL Server (Azure SQL in production), used by warehouse staff on shared PDA browsers (badge login, barcode scanning, stock check-in/out). The client will be a React app that doesn't exist yet. The connection string placeholders in `appsettings.example.json` are in German.
 
 Projects:
 - `InventoryApp.Api` — ASP.NET Core Web API, EF Core (SQL Server), `net10.0`
 - `InventoryApp.Tests` — xUnit tests for the API, `net10.0`
-- `InventoryApp.Maui` — **legacy client that will be replaced by a React frontend** because of unresolved MAUI/Android compatibility issues. Don't invest in new MAUI features; keep the API frontend-agnostic (plain JSON over HTTP). It uses MVVM via CommunityToolkit.Mvvm and ZXing.Net.Maui for scanning, targets `net8.0-android/ios/maccatalyst`, and isn't in `InventoryApp.sln`.
 
 **Multi-tenancy and security refactor in progress** (branch `ft/multi-tenancy`): read `docs/PROJECT_CONTEXT.md` first. It records the confirmed decisions, the assumptions made, the open issues, the implementation status and the remaining phases.
+
+## Conventions
+
+- Comment as little as possible. Code and test names carry the meaning; write a comment only when the reason isn't visible in the code (a security invariant, a database constraint, a workaround). No XML docs that restate a name, no section separators, no step numbers, no trailing comments.
 
 ## Commands
 
@@ -40,7 +43,7 @@ dotnet ef database update --project ./InventoryApp.Api --connection "<connection
 
 ### Integration test database
 
-Integration tests run against a real SQL Server, not EF Core In-Memory. The README's mention of In-Memory testing is out of date. `DatabaseFixture` reads the connection string from the `ConnectionStrings__DefaultConnection` environment variable and throws if it isn't set. On startup it runs `MigrateAsync()`, and at teardown it calls `EnsureDeletedAsync()`, which **drops the database**. Only point it at a throwaway DB.
+Integration tests run against a real SQL Server, not EF Core In-Memory. `DatabaseFixture` reads the connection string from the `ConnectionStrings__DefaultConnection` environment variable and throws if it isn't set. On startup it runs `MigrateAsync()`, and at teardown it calls `EnsureDeletedAsync()`, which **drops the database**. Only point it at a throwaway DB.
 
 - **CI:** the variable is set in the workflow and comes from GitHub.
 - **Locally:** run the tests against a SQL Server Docker container on `localhost,1433` (the container runs SQL Server 2019, CI uses 2022), so you can test without pushing. `InventoryApp.Tests/local.runsettings` is gitignored and sets the variable. The test `.csproj` loads that file automatically when it exists, so plain `dotnet test` and IDE test runners pick it up. To create it, copy `local.runsettings.example` and fill in the SA password. A variable already set in the shell also works.
@@ -97,14 +100,10 @@ The `Entra` scheme (`Security/EntraAuthentication.cs`) is separate from `Employe
 
 Tests: `EntraTestBase` makes tokens with `EntraTestTokens` (own RSA key; `ApiFactory` swaps only the key discovery) and seeds `TenantAdmin` rows. `ApiFactory` also has `DatabaseFailure` (makes every query throw) and registers the test-only `InventoryProbeController`, which goes for inventory data like a careless admin endpoint would.
 
-### MAUI client (legacy, being replaced by React)
+### Frontend
 
-The notes below describe the existing MAUI code for reference only. The React frontend will need to cover the same features: barcode login, camera barcode scanning, creating a product when a scanned barcode is unknown, stock +/- and local search. It doesn't exist in the repo yet, so ask before assuming its stack or location. The API has no CORS configured, and a browser-based React app on another origin will need a CORS policy in `Program.cs`.
-
-- `MauiProgram.cs` loads an **embedded resource** `appsettings.json`, copied from `InventoryApp.Maui/appsettings.example.json`, which holds `ApiSettings:ProductsEndpointUrl` and `ApiSettings:EmployeesEndpointsUrl`. `ApiService` (singleton) throws on startup if either one is missing.
-- Views and ViewModels are registered as transient pairs (`ScannerPage`/`ScannerViewModel`, `InventoryListPage`/`InventoryListViewModel`, `LoginPage`/`LoginViewModel`). Shell navigation is a two-tab `TabBar` (Scanner, Lager).
-- The client has drifted from the API contract. `Maui/Models/Product.cs` still uses an int `Id`, `Barcode` and `Quantity`. `ApiService` calls `GET products/barcode/{barcode}`, `PUT products/{Id}` and `POST employees/change-pin`, but the API exposes `GET/PUT products/{internalBarcode}` and has no change-pin endpoint. Treat the API as the source of truth, not the MAUI client.
+The client will be a browser-based React app. It doesn't exist in the repo yet, so ask before assuming its stack or location. It will need barcode login, camera barcode scanning, product creation for unknown barcodes, stock +/- and local search. The API has no CORS configured, and a React app on another origin will need a CORS policy in `Program.cs`.
 
 ## CI/CD
 
-`.github/workflows/backend-pipeline.yml` runs on pushes to `main`, `ft/*` and `refactor/*`, and on PRs to `main`. It builds the API and runs all tests against a SQL Server 2022 service container. On `main` only, it applies EF migrations to Azure SQL and deploys to the Azure Web App `InventoryApi-MarvinFranke`. The MAUI app isn't built in CI.
+`.github/workflows/backend-pipeline.yml` runs on pushes to `main`, `ft/*` and `refactor/*`, and on PRs to `main`. It builds the API and runs all tests against a SQL Server 2022 service container. On `main` only, it applies EF migrations to Azure SQL and deploys to the Azure Web App `InventoryApi-MarvinFranke`.

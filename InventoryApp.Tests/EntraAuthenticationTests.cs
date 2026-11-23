@@ -34,8 +34,6 @@ public class EntraAuthenticationTests : EntraTestBase
         EntraTestTokens.Create(
             Time.GetUtcNow(), objectId, directoryId, issuer, audience, lifetime: lifetime, claims: claims);
 
-    // ---- A valid administrator -------------------------------------------------------
-
     [Fact]
     public async Task ATenantAdministrator_IsRecognised_WithItsTenantAndPermissions()
     {
@@ -109,8 +107,6 @@ public class EntraAuthenticationTests : EntraTestBase
         Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(PlatformTenants, token));
         Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(AdminMe, token));
     }
-
-    // ---- Token validation ------------------------------------------------------------
 
     [Fact]
     public async Task ARequest_WithoutAToken_IsUnauthorized()
@@ -191,10 +187,10 @@ public class EntraAuthenticationTests : EntraTestBase
         var admin = await CreateTenantAdminAsync();
         var token = Token(admin.EntraObjectId, lifetime: TimeSpan.FromMinutes(5));
 
-        Time.Advance(TimeSpan.FromMinutes(5) + TimeSpan.FromSeconds(30)); // expired, but within the one minute of skew
+        Time.Advance(TimeSpan.FromMinutes(5) + TimeSpan.FromSeconds(30));
         Assert.Equal(HttpStatusCode.OK, await StatusAsync(AdminMe, token));
 
-        Time.Advance(TimeSpan.FromMinutes(1)); // beyond the skew
+        Time.Advance(TimeSpan.FromMinutes(1));
         Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync(AdminMe, token));
     }
 
@@ -235,7 +231,7 @@ public class EntraAuthenticationTests : EntraTestBase
     [InlineData("tid", "")]
     [InlineData("tid", "not-a-guid")]
     [InlineData("tid", "00000000-0000-0000-0000-000000000000")]
-    [InlineData("tid", "{11111111-1111-4111-8111-111111111111}")] // right directory, but not the plain form
+    [InlineData("tid", "{11111111-1111-4111-8111-111111111111}")]
     [InlineData("oid", null)]
     [InlineData("oid", "")]
     [InlineData("oid", "not-a-guid")]
@@ -297,12 +293,10 @@ public class EntraAuthenticationTests : EntraTestBase
         Assert.Equal(HttpStatusCode.OK, await StatusAsync(AdminMe, token));
     }
 
-    // ---- The mapping decides, not the token ------------------------------------------
-
     [Fact]
     public async Task AnUnknownIdentity_IsSignedInButNotAnAdministrator()
     {
-        var token = Token(); // valid in Entra, no mapping, no platform role
+        var token = Token();
 
         Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(AdminMe, token));
         Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(AdminTenant, token));
@@ -375,8 +369,6 @@ public class EntraAuthenticationTests : EntraTestBase
         Assert.Null(platformOnly.Tenant);
     }
 
-    // ---- One tenant, decided by the server -------------------------------------------
-
     [Fact]
     public async Task ATenantAdministrator_OnlyEverSeesTheMappedTenant()
     {
@@ -439,11 +431,9 @@ public class EntraAuthenticationTests : EntraTestBase
 
             Assert.Equal(TenantId, profile.Tenant!.Id);
             Assert.Equal(new[] { Permissions.EmployeesManage }, profile.Permissions);
-            Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(AdminTenant, token)); // Tenant.Settings is not in its role
+            Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(AdminTenant, token));
         }
     }
-
-    // ---- The two schemes stay apart --------------------------------------------------
 
     [Fact]
     public async Task AnEmployeeToken_CannotReachAdministratorEndpoints()
@@ -452,7 +442,7 @@ public class EntraAuthenticationTests : EntraTestBase
         await CreateEmployeeAsync("Manager", "BADGE-M", DefaultRoles.WarehouseManager);
         var employeeToken = await LoginTokenAsync(pda, "BADGE-M");
 
-        Assert.Equal(HttpStatusCode.OK, await StatusAsync("/api/products", employeeToken)); // it is a good token...
+        Assert.Equal(HttpStatusCode.OK, await StatusAsync("/api/products", employeeToken));
 
         Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync(AdminMe, employeeToken));
         Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync(AdminTenant, employeeToken));

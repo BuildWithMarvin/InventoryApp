@@ -5,10 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 public static class ControllerTestExtensions
 {
-    /// <summary>
-    /// Calls to a controller made directly (without HTTP) have no authenticated user. This gives it
-    /// the one the validated session would provide.
-    /// </summary>
     public static TController AsEmployee<TController>(this TController controller, int employeeId)
         where TController : ControllerBase
     {

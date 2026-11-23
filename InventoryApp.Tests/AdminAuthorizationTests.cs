@@ -21,8 +21,6 @@ public class AdminAuthorizationTests : EntraTestBase
     {
     }
 
-    // ---- Permissions of a tenant administrator ---------------------------------------
-
     [Fact]
     public async Task WithoutThePermission_AnAdministratorGets403_ButIsStillSignedIn()
     {
@@ -30,8 +28,8 @@ public class AdminAuthorizationTests : EntraTestBase
         var admin = await CreateTenantAdminAsync(roleName: "EmployeesOnly");
         var token = TokenFor(admin);
 
-        Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(AdminTenant, token)); // needs Tenant.Settings
-        Assert.Equal(HttpStatusCode.OK, await StatusAsync(AdminMe, token));            // any administrator
+        Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(AdminTenant, token));
+        Assert.Equal(HttpStatusCode.OK, await StatusAsync(AdminMe, token));
     }
 
     [Fact]
@@ -81,8 +79,6 @@ public class AdminAuthorizationTests : EntraTestBase
         Assert.Empty(profile.Permissions.Intersect(Permissions.Of(PermissionScope.Inventory)));
     }
 
-    // ---- Decision D8: administrators never reach inventory data ----------------------
-
     private async Task<(Employee Employee, Product Product)> SeedInventoryAsync()
     {
         var employee = await CreateEmployeeAsync("Anna", "BADGE-1");
@@ -114,8 +110,8 @@ public class AdminAuthorizationTests : EntraTestBase
         Assert.Equal(0, counts!.Products);
         Assert.Equal(0, counts.Stocks);
         Assert.Equal(0, counts.Locations);
-        Assert.Equal(1, counts.Employees);   // administration data of the mapped tenant is reachable...
-        Assert.Equal(TenantId, counts.TenantId); // ...because the tenant is bound
+        Assert.Equal(1, counts.Employees);
+        Assert.Equal(TenantId, counts.TenantId);
         Assert.Equal("0", await (await GetAsync("/test-probe/employee-products", token)).Content.ReadAsStringAsync());
     }
 
@@ -130,7 +126,7 @@ public class AdminAuthorizationTests : EntraTestBase
         Assert.Equal(0, counts!.Products);
         Assert.Equal(0, counts.Stocks);
         Assert.Equal(0, counts.Locations);
-        Assert.Equal(0, counts.Employees); // no tenant is bound, so no tenant data at all
+        Assert.Equal(0, counts.Employees);
         Assert.Null(counts.TenantId);
     }
 
@@ -160,7 +156,7 @@ public class AdminAuthorizationTests : EntraTestBase
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("administrator request", await response.Content.ReadAsStringAsync());
-        Assert.Equal(1, await Context.Products.CountAsync()); // only the seeded one
+        Assert.Equal(1, await Context.Products.CountAsync());
     }
 
     [Fact]
@@ -187,8 +183,6 @@ public class AdminAuthorizationTests : EntraTestBase
         Assert.Single(products!);
     }
 
-    // ---- Platform permissions --------------------------------------------------------
-
     [Fact]
     public void PlatformPermissions_AreSeparateFromTenantPermissions_AndNeverIncludeInventoryOrRoleDefinitions()
     {
@@ -199,8 +193,6 @@ public class AdminAuthorizationTests : EntraTestBase
         Assert.DoesNotContain(PlatformPermissions.All, p => p.Contains("Product") || p.Contains("Stock.") || p.Contains("Location"));
         Assert.DoesNotContain(PlatformPermissions.All, p => p.Contains("Role"));
     }
-
-    // ---- The database can't be asked -------------------------------------------------
 
     [Fact]
     public async Task WhenTheDatabaseFails_NothingIsGranted_AndTheClientIsToldToRetry()
@@ -228,6 +220,6 @@ public class AdminAuthorizationTests : EntraTestBase
             Factory.DatabaseFailure.Fail = false;
         }
 
-        Assert.Equal(HttpStatusCode.OK, await StatusAsync(AdminTenant, tenantToken)); // and it recovers
+        Assert.Equal(HttpStatusCode.OK, await StatusAsync(AdminTenant, tenantToken));
     }
 }

@@ -17,8 +17,6 @@ public class AdministrationTests : EntraTestBase
     {
     }
 
-    // ---- Helpers ---------------------------------------------------------------------
-
     private async Task<string> AdminTokenAsync(Tenant? tenant = null) =>
         TokenFor(await CreateTenantAdminAsync(tenant));
 
@@ -41,8 +39,6 @@ public class AdministrationTests : EntraTestBase
     }
 
     private static string DeviceUrl(string tail = "") => $"/api/admin/devices{tail}";
-
-    // ---- Every endpoint: who gets in -------------------------------------------------
 
     public static IEnumerable<object[]> AdminEndpoints() =>
     [
@@ -135,8 +131,6 @@ public class AdministrationTests : EntraTestBase
         Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(http, url, body, token: tenantAdminToken)).StatusCode);
     }
 
-    // ---- Tenant settings: RequirePin ---------------------------------------------------
-
     [Fact]
     public async Task RequirePin_CannotBeSwitchedOn_WhileAnActiveEmployeeHasNoPin()
     {
@@ -159,7 +153,7 @@ public class AdministrationTests : EntraTestBase
         var inactive = await CreateEmployeeAsync("Ben", "B-1");
         await using (var context = CreateContextFor(Tenant))
         {
-            (await context.Employees.SingleAsync(e => e.Id == inactive.Id)).Deactivate(); // inactive without PIN doesn't count
+            (await context.Employees.SingleAsync(e => e.Id == inactive.Id)).Deactivate();
             await context.SaveChangesAsync();
         }
         var token = await AdminTokenAsync();
@@ -178,8 +172,6 @@ public class AdministrationTests : EntraTestBase
 
         await AssertStatusAsync(HttpStatusCode.BadRequest, await SendAsync(HttpMethod.Put, "/api/admin/tenant/require-pin", new { }, token));
     }
-
-    // ---- Devices ---------------------------------------------------------------------
 
     [Fact]
     public async Task CreateDevice_ReturnsTheEnrollmentCodeOnce_AndTheDeviceCanEnrollWithIt()
@@ -225,8 +217,8 @@ public class AdministrationTests : EntraTestBase
             await SendAsync(HttpMethod.Post, DeviceUrl($"/{pda.DeviceId}/enrollment-code"), token: token));
 
         Assert.False(reissued.Device.IsEnrolled);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(pda, "A-1")).StatusCode);            // old cookie is dead
-        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync("/api/products/X", employeeToken));  // session ended
+        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(pda, "A-1")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync("/api/products/X", employeeToken));
     }
 
     [Fact]
@@ -263,8 +255,6 @@ public class AdministrationTests : EntraTestBase
         await using var context = CreateContextFor(other);
         Assert.True((await context.Devices.SingleAsync()).IsActive);
     }
-
-    // ---- Employees -------------------------------------------------------------------
 
     [Fact]
     public async Task CreateEmployee_DefaultsToWarehouseEmployee_AndNeverReturnsTheBadge()
@@ -386,7 +376,7 @@ public class AdministrationTests : EntraTestBase
         var anna = await CreateEmployeeAsync("Anna", "A-1");
         var pda = await EnrollPdaAsync();
         var employeeToken = await LoginTokenAsync(pda, "A-1");
-        Assert.Equal(HttpStatusCode.NotFound, await StatusAsync("/api/products/NOPE", employeeToken)); // allowed (Products.Read), just no such product
+        Assert.Equal(HttpStatusCode.NotFound, await StatusAsync("/api/products/NOPE", employeeToken));
         var token = await AdminTokenAsync();
 
         // Products.Read is in both default roles, so use a role without it.
@@ -530,8 +520,6 @@ public class AdministrationTests : EntraTestBase
         Assert.Equal(new[] { DefaultRoles.WarehouseEmployee }, row.EmployeeRoles.Select(er => er.Role!.Name));
     }
 
-    // ---- Roles -----------------------------------------------------------------------
-
     [Fact]
     public async Task ListRoles_ShowsTheDefaultRoles_WithTheirScope()
     {
@@ -571,8 +559,8 @@ public class AdministrationTests : EntraTestBase
     }
 
     [Theory]
-    [InlineData(Permissions.EmployeesManage)] // an admin permission in an inventory role
-    [InlineData("Nope.Nothing")]              // not in the catalog
+    [InlineData(Permissions.EmployeesManage)]
+    [InlineData("Nope.Nothing")]
     public async Task CreateRole_RejectsAdminAndUnknownPermissions(string permission)
     {
         var token = await AdminTokenAsync();
@@ -605,7 +593,7 @@ public class AdministrationTests : EntraTestBase
 
         Assert.Equal("Stock only", updated.Name);
         Assert.Equal(new[] { Permissions.StockRead }, updated.Permissions);
-        Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync("/api/products/X", employeeToken)); // lost Products.Read
+        Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync("/api/products/X", employeeToken));
         Assert.NotNull(anna);
     }
 
@@ -648,7 +636,7 @@ public class AdministrationTests : EntraTestBase
     [Fact]
     public async Task DeleteRole_IsRefusedWhileInUse_AndForSystemRoles_AndWorksOtherwise()
     {
-        await CreateEmployeeAsync("Anna", "A-1"); // WarehouseEmployee
+        await CreateEmployeeAsync("Anna", "A-1");
         var token = await AdminTokenAsync();
         var roles = await Context.Roles.ToListAsync();
         int Id(string name) => roles.Single(r => r.Name == name).Id;
@@ -676,8 +664,6 @@ public class AdministrationTests : EntraTestBase
         Assert.True(await check.Roles.AnyAsync(r => r.Id == foreignId));
     }
 
-    // ---- Sessions --------------------------------------------------------------------
-
     [Fact]
     public async Task Sessions_AreListedForTheOwnTenantOnly_AndCanBeRevoked()
     {
@@ -699,8 +685,8 @@ public class AdministrationTests : EntraTestBase
         Assert.True(session.IsActive);
 
         await AssertStatusAsync(HttpStatusCode.NoContent, await SendAsync(HttpMethod.Post, $"/api/admin/sessions/{session.Id}/revoke", token: token));
-        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync("/api/products/X", employeeToken)); // at once
-        await AssertStatusAsync(HttpStatusCode.NoContent, await SendAsync(HttpMethod.Post, $"/api/admin/sessions/{session.Id}/revoke", token: token)); // idempotent
+        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync("/api/products/X", employeeToken));
+        await AssertStatusAsync(HttpStatusCode.NoContent, await SendAsync(HttpMethod.Post, $"/api/admin/sessions/{session.Id}/revoke", token: token));
 
         Assert.Empty(await ReadAsync<List<SessionDto>>(await SendAsync(HttpMethod.Get, "/api/admin/sessions", token: token)));
         var all = await ReadAsync<List<SessionDto>>(await SendAsync(HttpMethod.Get, "/api/admin/sessions?includeInactive=true", token: token));
@@ -730,14 +716,12 @@ public class AdministrationTests : EntraTestBase
         var pda = await EnrollPdaAsync();
         await LoginTokenAsync(pda, "A-1");
         var token = await AdminTokenAsync();
-        Time.Advance(TimeSpan.FromMinutes(45)); // idle timeout is 30 minutes
+        Time.Advance(TimeSpan.FromMinutes(45));
 
         Assert.Empty(await ReadAsync<List<SessionDto>>(await SendAsync(HttpMethod.Get, "/api/admin/sessions", token: token)));
         var all = await ReadAsync<List<SessionDto>>(await SendAsync(HttpMethod.Get, "/api/admin/sessions?includeInactive=true", token: token));
         Assert.False(Assert.Single(all).IsActive);
     }
-
-    // ---- Platform: tenants -----------------------------------------------------------
 
     [Fact]
     public async Task CreateTenant_SeedsTheThreeDefaultRoles_AndRefusesADuplicateName()
@@ -790,8 +774,6 @@ public class AdministrationTests : EntraTestBase
         await ReadAsync<TenantDto>(await SendAsync(HttpMethod.Post, $"/api/platform/tenants/{TenantId}/activate", token: token));
         Assert.Equal(HttpStatusCode.OK, await StatusAsync("/api/admin/tenant", tenantAdminToken));
     }
-
-    // ---- Platform: inside a tenant ---------------------------------------------------
 
     [Fact]
     public async Task APlatformAdmin_WorksInTheTenantOfTheRoute_AndOnlyThere()
@@ -849,7 +831,7 @@ public class AdministrationTests : EntraTestBase
 
         await AssertStatusAsync(HttpStatusCode.OK, await SendAsync(HttpMethod.Post, $"{root}/devices", new { name = "New PDA" }, token));
         await AssertStatusAsync(HttpStatusCode.OK, await SendAsync(HttpMethod.Put, $"{root}/employees/{anna.Id}/roles", new { roles = new[] { DefaultRoles.WarehouseManager } }, token));
-        await AssertStatusAsync(HttpStatusCode.OK, await SendAsync(HttpMethod.Put, $"{root}/require-pin", new { required = true }, token)); // Anna has a PIN now
+        await AssertStatusAsync(HttpStatusCode.OK, await SendAsync(HttpMethod.Put, $"{root}/require-pin", new { required = true }, token));
     }
 
     [Fact]
@@ -865,7 +847,7 @@ public class AdministrationTests : EntraTestBase
         Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync("/api/admin/roles", token));
         // Nor does any platform route expose products or stock (D8).
         Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync($"/api/platform/tenants/{TenantId}/products", token));
-        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync("/api/products/ANY", token)); // an Entra token is no employee token
+        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync("/api/products/ANY", token));
     }
 
     [Fact]
@@ -874,7 +856,7 @@ public class AdministrationTests : EntraTestBase
         var token = PlatformAdminToken();
 
         Assert.Equal(HttpStatusCode.NotFound, await StatusAsync("/api/platform/tenants/999999/employees", token));
-        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync("/api/platform/tenants/abc/employees", token)); // no such route: fail closed
+        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync("/api/platform/tenants/abc/employees", token));
     }
 
     [Fact]
@@ -896,7 +878,7 @@ public class AdministrationTests : EntraTestBase
     public async Task AnIdentityThatIsBothTenantAndPlatformAdmin_CannotLeaveItsTenant_ButWorksInIt()
     {
         var other = await CreateTenantAsync("Other");
-        var admin = await CreateTenantAdminAsync(); // maps to Tenant
+        var admin = await CreateTenantAdminAsync();
         var token = EntraTestTokens.Create(Time.GetUtcNow(), objectId: admin.EntraObjectId, directoryId: admin.EntraTenantId,
             roles: [EntraTestTokens.PlatformAdminRole]);
 
@@ -905,8 +887,6 @@ public class AdministrationTests : EntraTestBase
         Assert.Equal(HttpStatusCode.Conflict, (await SendAsync(HttpMethod.Post, "/api/platform/tenants", new { name = "New" }, token)).StatusCode);
         Assert.False(await Context.Tenants.AnyAsync(t => t.Name == "New"));
     }
-
-    // ---- Platform: tenant administrators ---------------------------------------------
 
     [Fact]
     public async Task AddingAnAdministrator_LetsThatIdentityAdministerTheTenant_UntilDeactivated()

@@ -76,7 +76,7 @@ public class TenantAdminTests
         Assert.False(admin.IsActive);
         Assert.Equal(Now.AddHours(1), admin.DeactivatedAt);
 
-        admin.Deactivate(Now.AddHours(2)); // the first time counts
+        admin.Deactivate(Now.AddHours(2));
         Assert.Equal(Now.AddHours(1), admin.DeactivatedAt);
 
         admin.Activate();
@@ -100,7 +100,7 @@ public class AdministrationRestrictionTests
         var context = new TenantContext();
 
         context.RestrictToAdministration();
-        context.Set(5); // binding a tenant afterwards doesn't bring it back
+        context.Set(5);
         context.RestrictToAdministration();
 
         Assert.False(context.InventoryAccess);

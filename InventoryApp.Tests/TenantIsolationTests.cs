@@ -39,8 +39,6 @@ public class TenantIsolationTests : IntegrationTestBase
         await otherContext.SaveChangesAsync();
     }
 
-    // ---- Query filters ---------------------------------------------------------------
-
     [Fact]
     public async Task Queries_OnlyReturnRowsOfTheCurrentTenant()
     {
@@ -105,8 +103,6 @@ public class TenantIsolationTests : IntegrationTestBase
         await Assert.ThrowsAsync<DbUpdateException>(() => Context.SaveChangesAsync());
     }
 
-    // ---- Write guard -----------------------------------------------------------------
-
     [Fact]
     public async Task SaveChanges_Throws_WhenWritingAnEntityOfAnotherTenant()
     {
@@ -133,8 +129,6 @@ public class TenantIsolationTests : IntegrationTestBase
 
         Assert.Equal(1, await noTenant.SaveChangesAsync());
     }
-
-    // ---- Controllers (IDOR) ----------------------------------------------------------
 
     [Fact]
     public async Task GetProductByBarcode_ReturnsNotFound_ForAProductOfAnotherTenant()
@@ -200,8 +194,6 @@ public class TenantIsolationTests : IntegrationTestBase
         Assert.Equal("10000002", Assert.Single(products).InternalBarcode);
     }
 
-    // ---- The database enforces isolation on its own ----------------------------------
-
     [Fact]
     public async Task Database_RejectsAStockThatPointsToALocationOfAnotherTenant()
     {
@@ -242,8 +234,6 @@ public class TenantIsolationTests : IntegrationTestBase
         await Assert.ThrowsAsync<SqlException>(() => Context.Database.ExecuteSqlInterpolatedAsync(
             $"INSERT INTO Products (TenantId, InternalBarcode, Name, Price) VALUES (999999, '10000001', 'Product', 0)"));
     }
-
-    // ---- Helpers ---------------------------------------------------------------------
 
     private async Task<Product> SeedProductOfOtherTenantAsync(string barcode)
     {

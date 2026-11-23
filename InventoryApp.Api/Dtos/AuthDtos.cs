@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace InventoryApp.Api.Dtos
 {
-    /// <summary>The one-time code an admin gave for this device, as typed or scanned.</summary>
     public record EnrollRequest([Required, MaxLength(100)] string EnrollmentCode);
 
     /// <summary>
@@ -11,7 +10,6 @@ namespace InventoryApp.Api.Dtos
     /// </summary>
     public record EnrollResponse(string DeviceCode, string DeviceName);
 
-    /// <summary>The device is identified by DeviceCode and authenticated by its cookie; the employee by badge (and PIN).</summary>
     public record LoginRequest(
         [Required, MaxLength(20)] string DeviceCode,
         [Required, MaxLength(50)] string BadgeBarcode,

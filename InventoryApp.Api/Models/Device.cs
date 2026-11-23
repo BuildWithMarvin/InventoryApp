@@ -3,16 +3,8 @@ using InventoryApp.Api.Security;
 
 namespace InventoryApp.Api.Models
 {
-    /// <summary>
-    /// A shared warehouse terminal (PDA). Identification and authentication are separate:
-    /// the <see cref="DeviceCode"/> is public (it is printed as a barcode and only says
-    /// "this is device X"), the credential proves the device really is the enrolled one.
-    /// The credential is created at enrollment and only ever leaves the server as an
-    /// HttpOnly cookie, so it is never readable by client-side code. Only its hash is stored.
-    /// </summary>
     public class Device : ITenantOwned
     {
-        /// <summary>How long an enrollment code stays valid.</summary>
         public static readonly TimeSpan EnrollmentCodeLifetime = TimeSpan.FromHours(24);
 
         private Device() { }
@@ -42,7 +34,6 @@ namespace InventoryApp.Api.Models
 
         public bool IsActive { get; private set; } = true;
 
-        /// <summary>SHA-256 of the credential in the device's cookie. Null until enrolled.</summary>
         [MaxLength(64)]
         public string? CredentialHash { get; private set; }
 
@@ -65,11 +56,6 @@ namespace InventoryApp.Api.Models
 
         public void Activate() => IsActive = true;
 
-        /// <summary>
-        /// Creates a one-time enrollment code (returned in plain text, only its hash is kept).
-        /// Issuing one also invalidates the current credential at once: re-enrolling a lost or
-        /// replaced device cuts off the old cookie.
-        /// </summary>
         public string IssueEnrollmentCode(DateTimeOffset now)
         {
             var code = DeviceCredentials.NewEnrollmentCode();
@@ -82,10 +68,6 @@ namespace InventoryApp.Api.Models
             return code;
         }
 
-        /// <summary>
-        /// Redeems the enrollment code: returns the new credential in plain text (for the cookie)
-        /// or null if the device is inactive or has no valid code. The code is burnt on success.
-        /// </summary>
         public string? CompleteEnrollment(DateTimeOffset now)
         {
             if (!IsActive || EnrollmentCodeHash is null || EnrollmentCodeExpiresAt is not { } expiresAt || expiresAt <= now)
@@ -104,7 +86,6 @@ namespace InventoryApp.Api.Models
         public bool VerifyCredential(string? presented) =>
             DeviceCredentials.Matches(presented, CredentialHash);
 
-        /// <summary>Cuts off the enrolled browser without issuing a new code.</summary>
         public void RevokeCredential()
         {
             CredentialHash = null;

@@ -20,8 +20,6 @@ secrets.json
 local.runsettings
 *.env
 
-# MAUI Specific
-.maui-hotreload/
 Generated\ Files/
 
 # NuGet Packages

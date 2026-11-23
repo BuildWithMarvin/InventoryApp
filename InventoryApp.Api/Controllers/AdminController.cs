@@ -9,12 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace InventoryApp.Api.Controllers
 {
-    /// <summary>
-    /// Endpoints for a tenant administrator (Microsoft Entra). The tenant is whatever the administrator's
-    /// mapping says, set by the authentication step; no tenant id is ever taken from the request.
-    /// Every action sits behind an <see cref="AdminPolicies"/> policy, which never accepts an employee token.
-    /// Roles are managed here and only here: a Platform Admin never edits role definitions (A2).
-    /// </summary>
     [Route("api/admin")]
     [ApiController]
     public class AdminController : TenantManagementController
@@ -24,7 +18,6 @@ namespace InventoryApp.Api.Controllers
         {
         }
 
-        /// <summary>Who am I, as far as this application is concerned. Any resolved administrator.</summary>
         [HttpGet("me")]
         [Authorize(Policy = AdminPolicies.Session)]
         public async Task<ActionResult<AdminProfileDto>> GetProfile()
@@ -46,9 +39,6 @@ namespace InventoryApp.Api.Controllers
                 Values(InventoryClaims.PlatformPermission)));
         }
 
-        // ---- Tenant settings -------------------------------------------------------------
-
-        /// <summary>The tenant this administrator administers.</summary>
         [HttpGet("tenant")]
         [Authorize(Policy = AdminPolicies.TenantSettings)]
         public async Task<ActionResult<TenantDto>> GetTenant()
@@ -62,8 +52,6 @@ namespace InventoryApp.Api.Controllers
         [Authorize(Policy = AdminPolicies.TenantSettings)]
         public Task<ActionResult<TenantDto>> SetRequirePin(SetRequirePinRequest request) =>
             SetRequirePinCore(request.Required!.Value);
-
-        // ---- Devices ---------------------------------------------------------------------
 
         [HttpGet("devices")]
         [Authorize(Policy = AdminPolicies.DevicesManage)]
@@ -86,8 +74,6 @@ namespace InventoryApp.Api.Controllers
         [HttpPost("devices/{deviceId:int}/deactivate")]
         [Authorize(Policy = AdminPolicies.DevicesManage)]
         public Task<ActionResult<DeviceDto>> DeactivateDevice(int deviceId) => SetDeviceActiveCore(deviceId, false);
-
-        // ---- Employees -------------------------------------------------------------------
 
         [HttpGet("employees")]
         [Authorize(Policy = AdminPolicies.EmployeesManage)]
@@ -121,8 +107,6 @@ namespace InventoryApp.Api.Controllers
         [Authorize(Policy = AdminPolicies.EmployeesManage)]
         public Task<ActionResult<EmployeeDto>> DeactivateEmployee(int employeeId) => SetEmployeeActiveCore(employeeId, false);
 
-        // ---- Sessions --------------------------------------------------------------------
-
         [HttpGet("sessions")]
         [Authorize(Policy = AdminPolicies.SessionsRevoke)]
         public Task<ActionResult<IReadOnlyList<SessionDto>>> ListSessions([FromQuery] bool includeInactive = false) =>
@@ -132,8 +116,6 @@ namespace InventoryApp.Api.Controllers
         [Authorize(Policy = AdminPolicies.SessionsRevoke)]
         public Task<IActionResult> RevokeSession(Guid sessionId) => RevokeSessionCore(sessionId);
 
-        // ---- Roles (tenant administrators only) -------------------------------------------
-        //
         // Only Inventory roles can be created and changed here. Admin roles (TenantAdmin and any other) are
         // listed but read-only: otherwise an administrator holding Roles.Manage could grant themselves more
         // admin permissions than they were given.

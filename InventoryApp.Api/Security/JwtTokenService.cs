@@ -6,11 +6,6 @@ using InventoryApp.Api.Models;
 
 namespace InventoryApp.Api.Security
 {
-    /// <summary>
-    /// Issues the signed access token for a session. The token only says who the session is for and
-    /// where to find it; whether it is still valid, and what the employee may do, is looked up in the
-    /// database on every request (see <see cref="EmployeeAuthentication"/>).
-    /// </summary>
     public class JwtTokenService
     {
         private readonly AuthOptions _options;

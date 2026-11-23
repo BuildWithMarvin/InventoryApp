@@ -2,11 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace InventoryApp.Api.Models
 {
-    /// <summary>
-    /// A badge login on a device. The JWT only points at it (claim "sid"); whether a request is
-    /// still allowed is decided here, on every request, so a session can be revoked immediately.
-    /// A device has at most one active session (enforced by a unique index).
-    /// </summary>
     public class EmployeeSession : ITenantOwned
     {
         private EmployeeSession() { }
@@ -48,10 +43,8 @@ namespace InventoryApp.Api.Models
 
         public DateTimeOffset CreatedAt { get; private set; }
 
-        /// <summary>Last request, used for the idle timeout.</summary>
         public DateTimeOffset LastSeenAt { get; private set; }
 
-        /// <summary>Absolute end of the session, whatever the activity.</summary>
         public DateTimeOffset ExpiresAt { get; private set; }
 
         public DateTimeOffset? RevokedAt { get; private set; }

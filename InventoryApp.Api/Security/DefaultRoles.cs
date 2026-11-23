@@ -2,7 +2,6 @@ using InventoryApp.Api.Models;
 
 namespace InventoryApp.Api.Security
 {
-    /// <summary>The roles every new tenant starts with.</summary>
     public static class DefaultRoles
     {
         public const string TenantAdmin = "TenantAdmin";

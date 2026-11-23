@@ -13,7 +13,6 @@ namespace InventoryApp.Api.Security
     {
         public const string SectionName = "Entra";
 
-        /// <summary>Login host, e.g. https://login.microsoftonline.com/ (a sovereign cloud differs).</summary>
         public string Instance { get; set; } = "https://login.microsoftonline.com/";
 
         /// <summary>
@@ -22,13 +21,8 @@ namespace InventoryApp.Api.Security
         /// </summary>
         public string? TenantId { get; set; }
 
-        /// <summary>Application (client) id of the API's app registration.</summary>
         public string? ClientId { get; set; }
 
-        /// <summary>
-        /// The accepted <c>aud</c>. Empty means the client id and <c>api://{ClientId}</c>
-        /// (v2 tokens carry the client id, v1 tokens the identifier URI).
-        /// </summary>
         public string? Audience { get; set; }
 
         /// <summary>
@@ -37,10 +31,8 @@ namespace InventoryApp.Api.Security
         /// </summary>
         public string RequiredScope { get; set; } = "access_as_user";
 
-        /// <summary>App role that makes an identity a Platform Admin. Assigned in the Entra portal.</summary>
         public string PlatformAdminRole { get; set; } = "Platform.Admin";
 
-        /// <summary>Tolerated clock difference to Microsoft's token issuer.</summary>
         public TimeSpan ClockSkew { get; set; } = TimeSpan.FromMinutes(1);
 
         public bool Enabled =>
@@ -50,7 +42,6 @@ namespace InventoryApp.Api.Security
         // sense once the settings are complete.
         public Guid GetDirectoryId() => Guid.Parse(TenantId!);
 
-        /// <summary>The v2.0 issuer of the directory, which is also where discovery starts.</summary>
         public string GetAuthority() => $"{Instance.TrimEnd('/')}/{TenantId}/v2.0";
 
         public IReadOnlyList<string> GetAudiences() =>

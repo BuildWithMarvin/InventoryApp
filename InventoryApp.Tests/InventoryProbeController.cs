@@ -8,11 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InventoryApp.Tests;
 
-/// <summary>
-/// Test-only endpoints (added to the application by <see cref="ApiFactory"/>, never part of the real API). They
-/// behave like a careless administrator endpoint that goes straight for inventory data through the shared
-/// DbContext. The tests then show the data is still out of reach.
-/// </summary>
 [ApiController]
 [Route("test-probe")]
 public class InventoryProbeController : ControllerBase

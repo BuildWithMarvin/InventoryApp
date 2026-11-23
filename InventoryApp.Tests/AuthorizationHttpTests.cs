@@ -30,8 +30,6 @@ public class AuthorizationHttpTests : ApiTestBase
         _managerToken = await LoginTokenAsync(await EnrollPdaAsync("PDA 2"), "BADGE-M");
     }
 
-    // ---- Permissions -----------------------------------------------------------------
-
     [Fact]
     public async Task EveryProductEndpoint_NeedsAToken()
     {
@@ -111,8 +109,6 @@ public class AuthorizationHttpTests : ApiTestBase
         Assert.False(await context.Employees.AnyAsync(e => e.BadgeBarcode == "EMP-1"));
     }
 
-    // ---- Tenant isolation over HTTP --------------------------------------------------
-
     [Fact]
     public async Task Products_OfAnotherTenant_AreInvisible_AndCannotBeChanged()
     {
@@ -141,8 +137,6 @@ public class AuthorizationHttpTests : ApiTestBase
         Assert.Equal("Only B", stillB!.Name);
         Assert.Equal(ben.Id, stillB.LastUpdatedByEmployeeId);
     }
-
-    // ---- An admin-set PIN must be replaced first -------------------------------------
 
     [Fact]
     public async Task AnAdminSetPin_BlocksEverythingExceptChangingIt()

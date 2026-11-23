@@ -2,11 +2,6 @@ using InventoryApp.Api.Security;
 
 namespace InventoryApp.Api.Models
 {
-    /// <summary>
-    /// Gives an employee a role. Created through <see cref="Employee.AssignRole"/>.
-    /// RoleScope repeats the role's scope so that a composite foreign key can make the
-    /// database itself refuse any role that isn't an Inventory role.
-    /// </summary>
     public class EmployeeRole : ITenantOwned
     {
         private EmployeeRole() { }

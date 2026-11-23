@@ -30,8 +30,6 @@ public class SessionTests : ApiTestBase
     private async Task<HttpStatusCode> RequestAsync(string token) =>
         (await GetAsync("/api/products", token)).StatusCode;
 
-    // ---- One session per device ------------------------------------------------------
-
     [Fact]
     public async Task ANewLoginOnTheSameDevice_EndsThePreviousSession()
     {
@@ -74,8 +72,6 @@ public class SessionTests : ApiTestBase
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }
 
-    // ---- Timeouts --------------------------------------------------------------------
-
     [Fact]
     public async Task ASession_EndsAfter30MinutesWithoutARequest()
     {
@@ -84,7 +80,7 @@ public class SessionTests : ApiTestBase
         Time.Advance(TimeSpan.FromMinutes(29));
         Assert.Equal(HttpStatusCode.OK, await RequestAsync(token));
 
-        Time.Advance(TimeSpan.FromMinutes(29)); // 29 minutes after the last request: still fine
+        Time.Advance(TimeSpan.FromMinutes(29));
         Assert.Equal(HttpStatusCode.OK, await RequestAsync(token));
 
         Time.Advance(TimeSpan.FromMinutes(30));
@@ -102,7 +98,7 @@ public class SessionTests : ApiTestBase
             Assert.Equal(HttpStatusCode.OK, await RequestAsync(token));
         }
 
-        Time.Advance(TimeSpan.FromMinutes(20)); // now 12 hours after login
+        Time.Advance(TimeSpan.FromMinutes(20));
         Assert.Equal(HttpStatusCode.Unauthorized, await RequestAsync(token));
     }
 
@@ -117,8 +113,6 @@ public class SessionTests : ApiTestBase
         Assert.Equal(HttpStatusCode.Unauthorized, await RequestAsync(oldToken));
         Assert.Equal(HttpStatusCode.OK, await RequestAsync(newToken));
     }
-
-    // ---- Revocation takes effect on the next request ---------------------------------
 
     [Fact]
     public async Task Logout_EndsTheSession()
@@ -213,14 +207,12 @@ public class SessionTests : ApiTestBase
         {
             var role = await context.Roles.Include(r => r.Permissions)
                 .SingleAsync(r => r.Name == DefaultRoles.WarehouseEmployee);
-            role.SetPermissions([Permissions.StockRead]); // no more Products.Read
+            role.SetPermissions([Permissions.StockRead]);
             await context.SaveChangesAsync();
         }
 
         Assert.Equal(HttpStatusCode.Forbidden, await RequestAsync(token));
     }
-
-    // ---- Tokens that don't come from a login -----------------------------------------
 
     [Fact]
     public async Task ARequest_WithoutAToken_IsUnauthorized()
@@ -286,8 +278,6 @@ public class SessionTests : ApiTestBase
         Assert.Equal(HttpStatusCode.Unauthorized, await RequestAsync(new JsonWebTokenHandler().CreateToken(descriptor)));
     }
 
-    // ---- Helpers ---------------------------------------------------------------------
-
     private async Task<EmployeeSession> LoginSessionAsync()
     {
         await LoginTokenAsync(_pda, "BADGE-1");
@@ -295,7 +285,6 @@ public class SessionTests : ApiTestBase
         return await context.EmployeeSessions.AsNoTracking().SingleAsync(s => s.RevokedAt == null);
     }
 
-    /// <summary>A token with valid signature and lifetime, built from a real session with some claims replaced.</summary>
     private string ForgeToken(
         EmployeeSession session,
         string key = ApiFactory.SigningKey,

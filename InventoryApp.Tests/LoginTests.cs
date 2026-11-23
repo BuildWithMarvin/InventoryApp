@@ -30,7 +30,7 @@ public class LoginTests : ApiTestBase
         Assert.Equal("Anna", login.Employee.Name);
         Assert.Equal(new[] { DefaultRoles.WarehouseEmployee }, login.Employee.Roles);
         Assert.False(login.MustChangePin);
-        Assert.DoesNotContain("BADGE-1", body); // the badge is a credential
+        Assert.DoesNotContain("BADGE-1", body);
 
         Assert.Equal(HttpStatusCode.OK, (await GetAsync("/api/products", login.AccessToken)).StatusCode);
     }
@@ -149,8 +149,6 @@ public class LoginTests : ApiTestBase
         Assert.Equal(annaOfA.Id, loginA!.Employee.Id);
         Assert.Equal(annaOfB.Id, loginB!.Employee.Id);
     }
-
-    // ---- PIN -------------------------------------------------------------------------
 
     [Fact]
     public async Task Pin_IsRequired_WhenTheTenantRequiresOne()

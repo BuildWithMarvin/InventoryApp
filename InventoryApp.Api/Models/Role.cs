@@ -3,11 +3,6 @@ using InventoryApp.Api.Security;
 
 namespace InventoryApp.Api.Models
 {
-    /// <summary>
-    /// A named set of permissions within one tenant. The scope is fixed at creation: an
-    /// Inventory role only holds inventory permissions and can be given to employees, an
-    /// Admin role only holds admin permissions and is for Entra identities.
-    /// </summary>
     public class Role : ITenantOwned
     {
         private Role() { }
@@ -44,7 +39,6 @@ namespace InventoryApp.Api.Models
 
         public PermissionScope Scope { get; private set; }
 
-        /// <summary>System roles can't be renamed or edited.</summary>
         public bool IsSystemRole { get; private set; }
 
         public ICollection<RolePermission> Permissions { get; } = new List<RolePermission>();
@@ -55,7 +49,6 @@ namespace InventoryApp.Api.Models
             Name = NormalizeName(name);
         }
 
-        /// <summary>Replaces the permissions of the role with exactly these.</summary>
         public void SetPermissions(IEnumerable<string> permissions)
         {
             EnsureEditable();
@@ -96,7 +89,6 @@ namespace InventoryApp.Api.Models
 
             foreach (var permission in permissions)
             {
-                // ScopeOf throws for permissions that aren't in the catalog.
                 if (Security.Permissions.ScopeOf(permission) != scope)
                     throw new ArgumentException(
                         $"The permission '{permission}' is not allowed in a {scope} role.",

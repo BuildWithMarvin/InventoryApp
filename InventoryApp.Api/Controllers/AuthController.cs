@@ -10,13 +10,6 @@ using Microsoft.Extensions.Options;
 
 namespace InventoryApp.Api.Controllers
 {
-    /// <summary>
-    /// Device enrollment and employee login. Three separate things are checked, in this order:
-    /// the device (its public code plus the secret cookie), then the tenant it belongs to (which
-    /// decides everything after), then the employee (badge, and PIN if the tenant requires one).
-    /// Every refusal looks the same to the caller so the endpoint can't be used to find out which
-    /// devices, badges or tenants exist.
-    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
@@ -49,10 +42,6 @@ namespace InventoryApp.Api.Controllers
             _tokens = tokens;
         }
 
-        /// <summary>
-        /// Turns a one-time enrollment code into the device credential, delivered as an HttpOnly
-        /// cookie. The cookie is scoped to /api/auth and sent with login only.
-        /// </summary>
         [HttpPost("enroll")]
         [AllowAnonymous]
         [EnableRateLimiting(EmployeeAuthentication.EnrollRateLimit)]
@@ -110,7 +99,6 @@ namespace InventoryApp.Api.Controllers
         {
             var now = _time.GetUtcNow();
 
-            // 1. The device: its public code names it, the cookie proves it.
             var deviceCode = request.DeviceCode.Trim().ToUpperInvariant();
 
             var device = await _context.Devices
@@ -123,7 +111,6 @@ namespace InventoryApp.Api.Controllers
             if (device == null || !credentialMatches || !device.IsActive)
                 return Denied();
 
-            // 2. The tenant comes from the device, never from the request.
             var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == device.TenantId);
 
             if (tenant == null || !tenant.IsActive)
@@ -131,7 +118,6 @@ namespace InventoryApp.Api.Controllers
 
             _tenant.Set(device.TenantId);
 
-            // 3. The employee.
             var badge = request.BadgeBarcode.Trim();
 
             var employee = await _context.Employees
@@ -155,7 +141,6 @@ namespace InventoryApp.Api.Controllers
 
                 if (!employee.HasPin)
                 {
-                    // An admin has to set a PIN first.
                     PinHasher.Verify("000000", DummyPinHash);
                     return Denied();
                 }
@@ -173,7 +158,6 @@ namespace InventoryApp.Api.Controllers
                     return LockedOut(employee, now);
             }
 
-            // 4. One session per device: the new login ends the previous one.
             var session = new EmployeeSession(employee, device, now, _options.AbsoluteLifetime);
 
             try
@@ -220,10 +204,6 @@ namespace InventoryApp.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Lets an employee choose their own PIN. Allowed while an admin-set PIN is still pending
-        /// (that is the point of it). The current PIN is checked and counted like a login attempt.
-        /// </summary>
         [HttpPost("change-pin")]
         [Authorize(Policy = Policies.EmployeeSession)]
         [EnableRateLimiting(EmployeeAuthentication.LoginRateLimit)]
@@ -273,8 +253,6 @@ namespace InventoryApp.Api.Controllers
             return NoContent();
         }
 
-        // ---- PIN accounting ----------------------------------------------------------
-        //
         // Parallel guesses must all be counted, or they would get past the lockout. Employee has a row
         // version: a conflicting update is reloaded and applied again on top of the newer state.
 
@@ -319,8 +297,6 @@ namespace InventoryApp.Api.Controllers
 
             return false;
         }
-
-        // ---- Responses ---------------------------------------------------------------
 
         private async Task<bool> IsTenantActiveAsync(int tenantId) =>
             await _context.Tenants.AnyAsync(t => t.Id == tenantId && t.IsActive);

@@ -9,13 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace InventoryApp.Api.Controllers
 {
-    /// <summary>
-    /// A Platform Admin working inside one tenant (support): tenant settings, devices, employees, sessions
-    /// and the tenant's administrators. The tenant is the route's <c>{tenantId}</c>, bound by
-    /// <see cref="BindRouteTenantAttribute"/> only after the policy of the action has authorized the caller.
-    /// Inventory data stays invisible (D8) and there is no role-definition endpoint (A2): roles are managed by
-    /// the tenant's own administrators in <see cref="AdminController"/>.
-    /// </summary>
     [Route("api/platform/tenants/{tenantId:int}")]
     [ApiController]
     [BindRouteTenant]
@@ -46,8 +39,6 @@ namespace InventoryApp.Api.Controllers
         public Task<ActionResult<TenantDto>> SetRequirePin(SetRequirePinRequest request) =>
             SetRequirePinCore(request.Required!.Value);
 
-        // ---- Devices ---------------------------------------------------------------------
-
         [HttpGet("devices")]
         [Authorize(Policy = AdminPolicies.PlatformDevicesManage)]
         public Task<ActionResult<IReadOnlyList<DeviceDto>>> ListDevices() => ListDevicesCore();
@@ -69,8 +60,6 @@ namespace InventoryApp.Api.Controllers
         [HttpPost("devices/{deviceId:int}/deactivate")]
         [Authorize(Policy = AdminPolicies.PlatformDevicesManage)]
         public Task<ActionResult<DeviceDto>> DeactivateDevice(int deviceId) => SetDeviceActiveCore(deviceId, false);
-
-        // ---- Employees -------------------------------------------------------------------
 
         [HttpGet("employees")]
         [Authorize(Policy = AdminPolicies.PlatformEmployeesManage)]
@@ -104,8 +93,6 @@ namespace InventoryApp.Api.Controllers
         [Authorize(Policy = AdminPolicies.PlatformEmployeesManage)]
         public Task<ActionResult<EmployeeDto>> DeactivateEmployee(int employeeId) => SetEmployeeActiveCore(employeeId, false);
 
-        // ---- Sessions --------------------------------------------------------------------
-
         [HttpGet("sessions")]
         [Authorize(Policy = AdminPolicies.PlatformSessionsRevoke)]
         public Task<ActionResult<IReadOnlyList<SessionDto>>> ListSessions([FromQuery] bool includeInactive = false) =>
@@ -115,8 +102,6 @@ namespace InventoryApp.Api.Controllers
         [Authorize(Policy = AdminPolicies.PlatformSessionsRevoke)]
         public Task<IActionResult> RevokeSession(Guid sessionId) => RevokeSessionCore(sessionId);
 
-        // ---- Tenant administrators -------------------------------------------------------
-        //
         // How a Tenant Admin comes to exist: a Platform Admin maps an Entra identity (the object id of a user
         // or invited guest in the configured directory) to this tenant's TenantAdmin role. Until that row is
         // there, the person can sign in to Entra but is no administrator here.

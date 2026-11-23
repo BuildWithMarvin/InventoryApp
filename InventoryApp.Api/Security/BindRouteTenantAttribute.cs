@@ -6,20 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InventoryApp.Api.Security
 {
-    /// <summary>
-    /// For a Platform Admin acting inside a tenant: the route says which tenant (<c>{tenantId}</c>), but the
-    /// route is only a *selector*. Action filters run after authorization, so by the time this runs the
-    /// caller has already passed its Platform policy; only then is the tenant checked to exist and bound
-    /// to <see cref="TenantContext"/>, which is what scopes every query and write from here on.
-    ///
-    /// It refuses (and binds nothing) when:
-    /// <list type="bullet">
-    /// <item>the request isn't an administrator request (an employee request never gets to choose a tenant),</item>
-    /// <item>the tenant doesn't exist (404),</item>
-    /// <item>the identity is already bound to a different tenant by its Tenant Admin mapping (409): a scope
-    /// belongs to one tenant for its whole life, so such an identity has to use a Platform-only account.</item>
-    /// </list>
-    /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class BindRouteTenantAttribute : Attribute, IAsyncActionFilter
     {

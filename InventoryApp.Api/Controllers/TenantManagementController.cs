@@ -9,16 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace InventoryApp.Api.Controllers
 {
-    /// <summary>
-    /// The administration of one tenant's devices, employees, sessions and PIN setting, shared by the two
-    /// kinds of administrator: a Tenant Admin (<see cref="AdminController"/>, tenant from the Entra
-    /// mapping) and a Platform Admin acting inside a tenant (<see cref="PlatformTenantController"/>, tenant
-    /// from the route, bound only after authorization). Both work on the tenant of the request scope, so the
-    /// logic doesn't care which one called. It never sees a tenant id.
-    ///
-    /// The derived controllers decide who may call what: every public action there names its own policy.
-    /// Nothing in here is an endpoint.
-    /// </summary>
     public abstract class TenantManagementController : ControllerBase
     {
         private readonly TimeProvider _time;
@@ -44,8 +34,6 @@ namespace InventoryApp.Api.Controllers
 
         private const string ChangedAtTheSameTime = "It was changed at the same moment. Reload and try again.";
 
-        // ---- PIN setting -----------------------------------------------------------------
-
         protected async Task<ActionResult<TenantDto>> SetRequirePinCore(bool required)
         {
             var tenant = await Context.Tenants.SingleAsync(t => t.Id == Context.RequireTenantId());
@@ -64,8 +52,6 @@ namespace InventoryApp.Api.Controllers
 
             return Ok(TenantDto.FromEntity(tenant));
         }
-
-        // ---- Devices ---------------------------------------------------------------------
 
         protected async Task<ActionResult<IReadOnlyList<DeviceDto>>> ListDevicesCore()
         {
@@ -96,7 +82,6 @@ namespace InventoryApp.Api.Controllers
             return Ok(new DeviceEnrollmentDto(DeviceDto.FromEntity(device), code, device.EnrollmentCodeExpiresAt!.Value));
         }
 
-        /// <summary>Re-issuing cuts off the enrolled browser (and so ends the device's session) at once.</summary>
         protected async Task<ActionResult<DeviceEnrollmentDto>> IssueEnrollmentCodeCore(int deviceId)
         {
             var device = await Context.Devices.FirstOrDefaultAsync(d => d.Id == deviceId);
@@ -138,8 +123,6 @@ namespace InventoryApp.Api.Controllers
 
             return Ok(DeviceDto.FromEntity(device));
         }
-
-        // ---- Employees -------------------------------------------------------------------
 
         private IQueryable<Employee> EmployeesWithRoles() =>
             Context.Employees.Include(e => e.EmployeeRoles).ThenInclude(er => er.Role);
@@ -184,7 +167,6 @@ namespace InventoryApp.Api.Controllers
             if (await Context.Employees.AnyAsync(e => e.BadgeBarcode == employee.BadgeBarcode))
                 return Clash("This barcode has already been assigned to another employee.");
 
-            // An admin-chosen PIN has to be replaced by the employee.
             if (request.Pin is not null)
                 employee.SetPin(PinHasher.Hash(request.Pin), mustChangePin: true);
 
@@ -248,7 +230,6 @@ namespace InventoryApp.Api.Controllers
 
             var wanted = roles.Select(r => r.Id).ToHashSet();
 
-            // Drop what is no longer wanted first; the roles loaded with the employee have their ids.
             foreach (var roleId in employee.EmployeeRoles.Select(er => er.RoleId).Where(id => !wanted.Contains(id)).ToList())
                 employee.RemoveRole(roleId);
 
@@ -269,10 +250,6 @@ namespace InventoryApp.Api.Controllers
             return Ok(EmployeeDto.FromEntity(employee));
         }
 
-        /// <summary>
-        /// Sets a PIN the employee must replace at the next login, clears a lockout and ends every session
-        /// of the employee. The PIN is never logged or returned.
-        /// </summary>
         protected async Task<IActionResult> SetEmployeePinCore(int employeeId, SetEmployeePinRequest request)
         {
             if (!PinHasher.IsValidFormat(request.Pin))
@@ -324,8 +301,6 @@ namespace InventoryApp.Api.Controllers
             return Ok(EmployeeDto.FromEntity(employee));
         }
 
-        // ---- Sessions --------------------------------------------------------------------
-
         protected async Task<ActionResult<IReadOnlyList<SessionDto>>> ListSessionsCore(bool includeInactive)
         {
             var now = _time.GetUtcNow();
@@ -356,7 +331,6 @@ namespace InventoryApp.Api.Controllers
             return Ok(sessions);
         }
 
-        /// <summary>Revoking an already revoked session is fine (idempotent).</summary>
         protected async Task<IActionResult> RevokeSessionCore(Guid sessionId)
         {
             if (!await Context.EmployeeSessions.AnyAsync(s => s.Id == sessionId))
@@ -367,11 +341,8 @@ namespace InventoryApp.Api.Controllers
             return NoContent();
         }
 
-        // ---- Helpers ---------------------------------------------------------------------
-
         private const string PinFormatMessage = "A PIN must consist of exactly 6 digits.";
 
-        /// <summary>Ends sessions at once (the next request with their token is refused). Tenant filtered.</summary>
         private async Task RevokeSessionsAsync(Expression<Func<EmployeeSession, bool>> which, string reason)
         {
             var now = _time.GetUtcNow();
@@ -384,7 +355,6 @@ namespace InventoryApp.Api.Controllers
                     .SetProperty(s => s.RevokedReason, reason));
         }
 
-        /// <summary>Saves; a concurrent change (row version) becomes a 409 instead of an error.</summary>
         protected async Task<ObjectResult?> TrySaveAsync()
         {
             try

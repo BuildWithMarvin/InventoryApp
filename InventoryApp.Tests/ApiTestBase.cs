@@ -8,10 +8,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 
-/// <summary>A device that went through enrollment: its public code and the secret cookie value.</summary>
 public record Pda(int DeviceId, string DeviceCode, string Cookie);
 
-/// <summary>Base for tests that go through the real HTTP pipeline (authentication, authorization, filters).</summary>
 public abstract class ApiTestBase : IntegrationTestBase
 {
     protected ApiFactory Factory { get; private set; } = null!;
@@ -25,7 +23,6 @@ public abstract class ApiTestBase : IntegrationTestBase
     {
     }
 
-    /// <summary>Configuration overrides for the application under test.</summary>
     protected virtual IReadOnlyDictionary<string, string> Settings => new Dictionary<string, string>();
 
     public override async Task InitializeAsync()
@@ -50,8 +47,6 @@ public abstract class ApiTestBase : IntegrationTestBase
         await base.DisposeAsync();
     }
 
-    // ---- Seeding ---------------------------------------------------------------------
-
     protected async Task<(Device Device, string EnrollmentCode)> CreateDeviceAsync(string name = "PDA 1", Tenant? tenant = null)
     {
         await using var context = CreateContextFor(tenant ?? Tenant);
@@ -64,7 +59,6 @@ public abstract class ApiTestBase : IntegrationTestBase
         return (device, code);
     }
 
-    /// <summary>Creates a device and enrolls it through the API, like a PDA at setup.</summary>
     protected async Task<Pda> EnrollPdaAsync(string name = "PDA 1", Tenant? tenant = null)
     {
         var (device, code) = await CreateDeviceAsync(name, tenant);
@@ -105,8 +99,6 @@ public abstract class ApiTestBase : IntegrationTestBase
         await context.SaveChangesAsync();
     }
 
-    // ---- Requests --------------------------------------------------------------------
-
     protected Task<HttpResponseMessage> LoginAsync(Pda pda, string badge, string? pin = null, string? cookie = null, string? deviceCode = null) =>
         SendAsync(HttpMethod.Post, "/api/auth/login",
             new LoginRequest(deviceCode ?? pda.DeviceCode, badge, pin),
@@ -140,7 +132,6 @@ public abstract class ApiTestBase : IntegrationTestBase
     protected Task<HttpResponseMessage> GetAsync(string url, string? token) =>
         SendAsync(HttpMethod.Get, url, token: token);
 
-    /// <summary>Cookie value from a Set-Cookie header, or null.</summary>
     protected static string? CookieValue(HttpResponseMessage response)
     {
         var header = SetCookieHeader(response);

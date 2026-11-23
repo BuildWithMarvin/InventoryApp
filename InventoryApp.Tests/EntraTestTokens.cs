@@ -3,11 +3,6 @@ using System.Text.Json;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
-/// <summary>
-/// Tokens that look like Microsoft Entra v2.0 access tokens, signed with a key the tests own. The
-/// application under test validates them with the real Entra scheme; only the key discovery
-/// (OpenID metadata over the internet) is replaced by this key (see <see cref="ApiFactory"/>).
-/// </summary>
 public static class EntraTestTokens
 {
     public static readonly Guid DirectoryId = Guid.Parse("11111111-1111-4111-8111-111111111111");
@@ -18,13 +13,11 @@ public static class EntraTestTokens
 
     public static string Authority => $"https://login.microsoftonline.com/{DirectoryId}/v2.0";
 
-    /// <summary>The key the application trusts (what Microsoft's published keys are in production).</summary>
     public static RsaSecurityKey SigningKey { get; } = new(RSA.Create(2048)) { KeyId = "entra-test-key" };
 
     // Same key id, different key: a signature made by someone else.
     private static readonly RsaSecurityKey ForeignKey = new(RSA.Create(2048)) { KeyId = "entra-test-key" };
 
-    /// <param name="claims">Replaces a claim; a null value removes it (e.g. <c>["tid"] = null</c>).</param>
     public static string Create(
         DateTimeOffset now,
         Guid? objectId = null,

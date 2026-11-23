@@ -39,7 +39,6 @@ namespace InventoryApp.Api.Controllers
         [Authorize(Policy = Permissions.ProductsRead)]
         public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
-            // Note: For future scaling (e.g., > 50,000 items), consider implementing pagination (Skip/Take).
             var products = await _context.Products
                 .Include(p => p.Stocks)
                 .ToListAsync();
@@ -77,7 +76,6 @@ namespace InventoryApp.Api.Controllers
                 return BadRequest(ex.Message);
             }
 
-            // SQL Server fills RowVersion on insert.
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 

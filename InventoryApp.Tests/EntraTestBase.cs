@@ -3,7 +3,6 @@ using InventoryApp.Api.Models;
 using InventoryApp.Api.Security;
 using Microsoft.EntityFrameworkCore;
 
-/// <summary>Base for HTTP tests with Microsoft Entra administrators. Tokens come from <see cref="EntraTestTokens"/>.</summary>
 public abstract class EntraTestBase : ApiTestBase
 {
     protected EntraTestBase(DatabaseFixture databaseFixture)
@@ -11,9 +10,6 @@ public abstract class EntraTestBase : ApiTestBase
     {
     }
 
-    // ---- Seeding ---------------------------------------------------------------------
-
-    /// <summary>A tenant administrator: the Entra identity plus its mapping row. The role defaults to the tenant's TenantAdmin.</summary>
     protected async Task<TenantAdmin> CreateTenantAdminAsync(
         Tenant? tenant = null,
         Guid? objectId = null,
@@ -36,7 +32,6 @@ public abstract class EntraTestBase : ApiTestBase
         return admin;
     }
 
-    /// <summary>An editable Admin-scope role with exactly these permissions, for testing partial administrators.</summary>
     protected async Task<Role> CreateAdminRoleAsync(string name, params string[] permissions)
     {
         await using var context = CreateContextFor(Tenant);
@@ -85,17 +80,11 @@ public abstract class EntraTestBase : ApiTestBase
         await context.SaveChangesAsync();
     }
 
-    // ---- Tokens ----------------------------------------------------------------------
-
-    /// <summary>A valid token for the identity of this mapping.</summary>
     protected string TokenFor(TenantAdmin admin) =>
         EntraTestTokens.Create(Time.GetUtcNow(), objectId: admin.EntraObjectId, directoryId: admin.EntraTenantId);
 
-    /// <summary>A valid token of a Platform Admin: the app role in the token, no mapping needed.</summary>
     protected string PlatformAdminToken(Guid? objectId = null) =>
         EntraTestTokens.Create(Time.GetUtcNow(), objectId: objectId, roles: [EntraTestTokens.PlatformAdminRole]);
-
-    // ---- Requests --------------------------------------------------------------------
 
     protected async Task<HttpStatusCode> StatusAsync(string url, string? token, HttpMethod? method = null) =>
         (await SendAsync(method ?? HttpMethod.Get, url, token: token)).StatusCode;

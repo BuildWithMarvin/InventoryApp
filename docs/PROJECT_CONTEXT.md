@@ -15,7 +15,7 @@ Every statement about a decision carries one of three labels. Do not promote a l
 
 ## 1. Project in one paragraph
 
-Proof-of-concept inventory system: ASP.NET Core Web API (`net10.0`, EF Core, SQL Server, Azure SQL in production) used by warehouse staff on shared PDA devices. The MAUI client (`InventoryApp.Maui`) is legacy and **will be replaced by a React frontend** (CONFIRMED earlier; no React code exists yet; do not invest in MAUI). The API must stay frontend-agnostic (plain JSON over HTTP). The ongoing work turns the single-tenant, unauthenticated API into a secure, multi-tenant system. Projects: `InventoryApp.Api`, `InventoryApp.Tests`, `InventoryApp.Maui` (not in the solution).
+Proof-of-concept inventory system: ASP.NET Core Web API (`net10.0`, EF Core, SQL Server, Azure SQL in production) used by warehouse staff on shared PDA devices. The former MAUI client was **removed** (2026-11-23) in favour of a React frontend (CONFIRMED earlier; no React code exists yet). The API must stay frontend-agnostic (plain JSON over HTTP). The ongoing work turns the single-tenant, unauthenticated API into a secure, multi-tenant system. Projects: `InventoryApp.Api`, `InventoryApp.Tests`.
 
 ## 2. Working agreements with the user (CONFIRMED)
 
@@ -59,7 +59,7 @@ Proof-of-concept inventory system: ASP.NET Core Web API (`net10.0`, EF Core, SQL
 | D13 | Do not manually delete or reset the Azure database. Assess whether the migration history needs re-baselining; prefer a controlled, migration-based approach. If a manual Azure operation ever becomes absolutely necessary, explain why and wait for approval. |
 | D14 | Branching: `refactor/use-dtos` was to be inspected and verified (done: DTOs complete, tests pass), then **the user** merges it into `main`, then a new feature branch is created from the updated `main`. Nothing is merged or pushed without approval. (See A12 and O1 for what actually happened.) |
 | D15 | Swagger is disabled in Production and enabled in Development. It never replaces authentication and authorization. **Implemented in Phase 4b** (`Program.cs`; tested for Development, Production and Staging). |
-| D16 | The MAUI client is legacy; keep the API frontend-agnostic; ask before assuming the React stack or location. |
+| D16 | The MAUI client is gone (removed 2026-11-23); keep the API frontend-agnostic; ask before assuming the React stack or location. |
 | D17 | Two separate authentication schemes: `EmployeeJwt` (badge and PIN) and `Entra` (Platform Admins and Tenant Admins). An employee token never grants admin access and an Entra token never grants employee access. (Stated by the user for Phase 4a; the former scheme name `Employee` was renamed.) |
 | D18 | TenantAdmin authorization is "Option 2": a database mapping links the Entra identity to one tenant and references the existing Admin-scope `TenantAdmin` role; admin permissions come from the existing permission catalog and role-permission rows; the mapping has `IsActive`, which is checked on every request. The identity key is `(tid, oid)`, never `sub`. Platform Admin has a separate, explicit permission set and never reaches inventory data (D8), enforced technically. |
 
@@ -74,7 +74,7 @@ Claude made or proposed these; the user said to use best practices and proceed. 
 | A3 | Device authentication for a browser PDA: the device credential is a server-issued random 256-bit token delivered **only as an HttpOnly, Secure, SameSite=Strict cookie** (`inv_device`, Path `/api/auth`, 400 days). Only its SHA-256 is stored. Enrollment is a one-time 130-bit code (24 h) redeemed at `POST /api/auth/enroll`. | Yes |
 | A4 | **The React app and the API are served from the same site** (preferably same origin), because A3 needs it; this also removes the need for CORS. | Not decided. See O2 |
 | A5 | The employee access token is kept **in memory only** by the client (a page reload means scanning the badge again). | Client does not exist |
-| A6 | Default permission sets: WarehouseManager has all inventory permissions; WarehouseEmployee has `Products.Read`, `Locations.Read`, `Stock.Read`, `Stock.Adjust`. Consequence: a WarehouseEmployee **cannot create products**, so the old MAUI flow "create a product when a scanned barcode is unknown" is manager-only. | Yes |
+| A6 | Default permission sets: WarehouseManager has all inventory permissions; WarehouseEmployee has `Products.Read`, `Locations.Read`, `Stock.Read`, `Stock.Adjust`. Consequence: a WarehouseEmployee **cannot create products**, so "create a product when a scanned barcode is unknown" is manager-only. | Yes |
 | A7 | An admin-set PIN is flagged `MustChangePin`; until replaced, an employee can only call `logout` and `change-pin`. Changing the PIN ends the employee's other sessions. | Yes |
 | A8 | PIN rules: 5 wrong attempts lock the employee for 15 minutes; a locked-out employee gets HTTP 423 with `Retry-After` (disclosed on purpose, since the caller already holds an enrolled device); BCrypt work factor 12; a supplied PIN is ignored if the tenant does not require one; an employee without a PIN cannot log in where a PIN is required; `change-pin` needs the current PIN only if one exists and counts wrong attempts like a login. | Yes |
 | A9 | All refusals at login look identical (401), except `pin_required` and the lockout. A dummy BCrypt check equalises timing for unknown badges. | Yes |
@@ -110,7 +110,7 @@ Claude made or proposed these; the user said to use best practices and proceed. 
 | O8 | A1, A2, A6 (the exact meaning of the TenantAdmin role, Platform Admin's reach over role definitions, and the default permission sets) have not been confirmed individually. |
 | O9 | The API still lacks endpoints for storage locations and stock (the permissions exist in the catalog; the old "stock +/-" feature has no endpoint). Devices, employees, roles, sessions and administrators have endpoints since 4b. |
 | O10 | Residual risks: a burst of parallel PIN guesses before the lockout lands is bounded only by the rate limit; the in-process rate limiter is per instance; `EmployeeSession` rows are never purged. |
-| O11 | The React frontend does not exist (stack and location unknown). The MAUI client no longer matches the API (login, `EmployeeId`, DTOs) and is intentionally not updated. |
+| O11 | The React frontend does not exist (stack and location unknown). The MAUI client was removed because it no longer matched the API. |
 | O12 | `README.md` was rewritten on 2026-11-23 to match the state after Phase 4b (status table, real test setup, local run steps). It must be updated again after Phase 5. |
 | O13 | Production role values were never inspected (no access); treated as moot under D5. If real roles existed, nothing carries over: the old `Employee.Role` column was dropped. |
 
@@ -228,7 +228,7 @@ Entra app registration and app roles (done by the user in the Azure portal; Clau
 
 ### Not in scope of this refactor
 
-The React frontend, MAUI changes, new storage-location/stock endpoints (O9).
+The React frontend, new storage-location/stock endpoints (O9).
 
 ## 14. Where things are
 

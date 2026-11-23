@@ -9,7 +9,6 @@ namespace InventoryApp.Api.Models
 
         internal RolePermission(int tenantId, string permission)
         {
-            // Throws for permissions that aren't in the catalog.
             Security.Permissions.ScopeOf(permission);
 
             TenantId = tenantId;

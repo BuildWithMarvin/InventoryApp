@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace InventoryApp.Api.Security
 {
-    /// <summary>Settings for employee authentication, bound from the "Auth" configuration section.</summary>
     public class AuthOptions : IValidatableObject
     {
         public const string SectionName = "Auth";
@@ -19,10 +18,8 @@ namespace InventoryApp.Api.Security
 
         public string Audience { get; set; } = "InventoryApp.Employee";
 
-        /// <summary>A session ends after this long without a request.</summary>
         public TimeSpan IdleTimeout { get; set; } = TimeSpan.FromMinutes(30);
 
-        /// <summary>A session ends after this long, whatever the activity.</summary>
         public TimeSpan AbsoluteLifetime { get; set; } = TimeSpan.FromHours(12);
 
         /// <summary>

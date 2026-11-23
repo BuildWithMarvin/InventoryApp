@@ -13,7 +13,6 @@ public class EmployeeTest
     [Fact]
     public void Constructor_CreatesActiveEmployee_WithoutPinOrRoles()
     {
-
         var employee = new Employee(
             TenantId,
             "Tom",
@@ -31,7 +30,6 @@ public class EmployeeTest
     [Fact]
     public void Constructor_TrimsName()
     {
-
         var employee = new Employee(
                   TenantId,
                   " Tom ",
@@ -44,7 +42,6 @@ public class EmployeeTest
     [Fact]
     public void Constructor_TrimsBadgeBarcode()
     {
-
         var employee = new Employee(
                   TenantId,
                   "Tom",
@@ -57,33 +54,27 @@ public class EmployeeTest
     [Fact]
     public void Constructor_ThrowsArgumentException_WhenNameIsEmpty()
     {
-
         Assert.Throws<ArgumentException>(() =>
             new Employee(TenantId, "", "EMP-12345"));
     }
     [Fact]
     public void Constructor_ThrowsArgumentException_WhenNameIsWhitespace()
     {
-
         Assert.Throws<ArgumentException>(() =>
             new Employee(TenantId, "   ", "EMP-12345"));
     }
     [Fact]
     public void Constructor_ThrowsArgumentException_WhenBadgeBarcodeIsEmpty()
     {
-
         Assert.Throws<ArgumentException>(() =>
             new Employee(TenantId, "Tom", ""));
     }
     [Fact]
     public void Constructor_ThrowsArgumentException_WhenBadgeBarcodeIsWhitespace()
     {
-
         Assert.Throws<ArgumentException>(() =>
             new Employee(TenantId, "Tom", "   "));
     }
-
-    // ---- Active flag -----------------------------------------------------------------
 
     [Fact]
     public void DeactivateAndActivate_ChangeIsActive()
@@ -96,8 +87,6 @@ public class EmployeeTest
         employee.Activate();
         Assert.True(employee.IsActive);
     }
-
-    // ---- Roles -----------------------------------------------------------------------
 
     [Fact]
     public void AssignRole_AddsAnInventoryRoleOfTheSameTenant()
@@ -143,8 +132,6 @@ public class EmployeeTest
 
         Assert.Throws<ArgumentException>(() => employee.AssignRole(foreignRole));
     }
-
-    // ---- PIN and lockout -------------------------------------------------------------
 
     [Fact]
     public void SetPin_StoresTheHash_AndClearsLockout()

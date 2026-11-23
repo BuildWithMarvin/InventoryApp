@@ -2,7 +2,6 @@ using System.Security.Claims;
 
 namespace InventoryApp.Api.Security
 {
-    /// <summary>Claim types of the employee access token. Names are short because they travel in every request.</summary>
     public static class InventoryClaims
     {
         public const string Subject = "sub";
@@ -14,24 +13,17 @@ namespace InventoryApp.Api.Security
 
         public const string Device = "did";
 
-        /// <summary>Added per request from the database, never stored in the token.</summary>
         public const string Permission = "permission";
 
-        /// <summary>Added per request while the employee still has to replace an admin-set PIN.</summary>
         public const string MustChangePin = "must_change_pin";
 
-        // ---- Administrators (Microsoft Entra) ------------------------------------------------
-
-        /// <summary>Entra directory id of the signed-in identity. Not an InventoryApp tenant.</summary>
         public const string EntraTenant = "tid";
 
         /// <summary>Entra object id of the signed-in identity. The stable key; "sub" is pairwise per app.</summary>
         public const string EntraObject = "oid";
 
-        /// <summary>Entra app roles of the token.</summary>
         public const string EntraRoles = "roles";
 
-        /// <summary>Delegated scopes of the token, space separated. App-only tokens have none.</summary>
         public const string EntraScope = "scp";
 
         /// <summary>
@@ -44,7 +36,6 @@ namespace InventoryApp.Api.Security
 
         public const string AdminKindPlatform = "platform";
 
-        /// <summary>A platform permission (see <see cref="PlatformPermissions"/>). Never mixed up with <see cref="Permission"/>.</summary>
         public const string PlatformPermission = "platform_permission";
     }
 

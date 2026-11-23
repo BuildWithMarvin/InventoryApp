@@ -1,20 +1,9 @@
 namespace InventoryApp.Api.Data
 {
-    /// <summary>
-    /// Holds the tenant of the current request scope. It is filled from validated
-    /// credentials (never from client input) and read by <see cref="InventoryDbContext"/>.
-    /// </summary>
     public class TenantContext
     {
         public int? TenantId { get; private set; }
 
-        /// <summary>
-        /// Whether this scope may read and write inventory data (products, stock, storage locations).
-        /// True for warehouse employees and the pre-login flows. An administrator request (Entra) is
-        /// restricted by <see cref="RestrictToAdministration"/> before anything else happens, so
-        /// administrators can never reach inventory data through the shared DbContext, whatever a
-        /// controller does (decision D8).
-        /// </summary>
         public bool InventoryAccess { get; private set; } = true;
 
         public void Set(int tenantId)

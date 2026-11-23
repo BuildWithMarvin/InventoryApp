@@ -12,10 +12,6 @@ using Microsoft.Extensions.Time.Testing;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
-/// <summary>
-/// The real application, in-process, on the shared test database. The clock is fake, so session
-/// timeouts can be tested by moving time instead of waiting.
-/// </summary>
 public class ApiFactory : WebApplicationFactory<Program>
 {
     public const string SigningKey = "test-signing-key-0123456789-abcdefghij";
@@ -29,7 +25,6 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 11, 1, 8, 0, 0, TimeSpan.Zero));
 
-    /// <summary>While <see cref="DatabaseFailure.Fail"/> is set, every database query of the application throws.</summary>
     public DatabaseFailure DatabaseFailure { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -57,7 +52,7 @@ public class ApiFactory : WebApplicationFactory<Program>
             services.PostConfigure<JwtBearerOptions>(EntraAuthentication.Scheme, options =>
             {
                 if (string.IsNullOrEmpty(options.Authority))
-                    return; // Entra is switched off in this test.
+                    return;
 
                 var configuration = new OpenIdConnectConfiguration { Issuer = options.TokenValidationParameters.ValidIssuer };
                 configuration.SigningKeys.Add(EntraTestTokens.SigningKey);
@@ -72,7 +67,6 @@ public class ApiFactory : WebApplicationFactory<Program>
     }
 }
 
-/// <summary>Makes every database query fail on demand, to test that nothing is granted when the database is down.</summary>
 public class DatabaseFailure : DbCommandInterceptor
 {
     public bool Fail { get; set; }

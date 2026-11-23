@@ -6,9 +6,7 @@ namespace InventoryApp.Api.Models
 {
     public class Product : IInventoryData
     {
-
         private Product() { }
-
 
         public Product(
             int tenantId,
@@ -39,7 +37,6 @@ namespace InventoryApp.Api.Models
                 ? null
                 : supplierBarcode.Trim();
         }
-        // Part of the composite key (TenantId, InternalBarcode); see InventoryDbContext.
         public int TenantId { get; private set; }
 
         [MaxLength(50)]
@@ -61,11 +58,8 @@ namespace InventoryApp.Api.Models
 
         public int TotalQuantity => Stocks?.Sum(s => s.Quantity) ?? 0;
 
-
-
         [Timestamp]
         public byte[] RowVersion { get; private set; } = null!;
-
 
         public ICollection<ProductStock> Stocks { get; } = new List<ProductStock>();
 
